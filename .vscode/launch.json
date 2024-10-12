@@ -15,7 +15,8 @@
                     "--no-run",
                     "--package=orcapod",
                     "--test",
-                    "store",
+                    "model",
+                    // "store",
                 ],
                 "filter": {
                     "kind": "test"
@@ -24,8 +25,9 @@
             "args": [
                 "--exact",
                 "--nocapture",
-                "pod",
-                // "something"
+                // "verify_hash"
+                "verify_pod_to_yaml",
+                // "verify_saved",
             ],
             "cwd": "${workspaceFolder}",
         },

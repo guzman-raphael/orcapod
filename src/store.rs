@@ -1,3 +1,4 @@
+//! Data persistence is provided by using a store backend.
 use crate::{
     error::{AnnotationExists, FileHasNoParent, NoAnnotationFound, NoSpecFound},
     model::{from_yaml, to_yaml, Pod},
@@ -7,19 +8,26 @@ use glob::{GlobError, Paths};
 use regex::Regex;
 use std::{collections::BTreeMap, error::Error, fs, iter::Map, path::PathBuf};
 
+/// Standard behavior of any store backend supported.
 pub trait OrcaStore {
+    /// How a pod is stored.
     fn save_pod(&self, pod: &Pod) -> Result<(), Box<dyn Error>>;
+    /// How to query stored pods.
     fn list_pod(&self) -> Result<BTreeMap<String, Vec<String>>, Box<dyn Error>>;
+    /// How to load a stored pod into a model instance.
     fn load_pod(&self, name: &str, version: &str) -> Result<Pod, Box<dyn Error>>;
+    /// How to delete a stored pod.
     fn delete_pod(&self, name: &str, version: &str) -> Result<(), Box<dyn Error>>;
 }
 
+/// Support for a storage backend on a local filesystem directory.
 #[derive(Debug)]
 pub struct LocalFileStore {
     location: PathBuf,
 }
 
 impl LocalFileStore {
+    /// Construct a local file store instance.
     pub fn new(location: impl Into<PathBuf>) -> Self {
         Self {
             location: location.into(),
@@ -72,6 +80,8 @@ impl LocalFileStore {
 }
 
 impl OrcaStore for LocalFileStore {
+    // todo: from pr review: stop using box dynamic error + mod.rs for file
+    // todo: annotatoin optional, load_pod with enum(hash, name:version), save_pod will skip annotation save if optional
     fn save_pod(&self, pod: &Pod) -> Result<(), Box<dyn Error>> {
         let class = get_struct_name::<Pod>()?;
 

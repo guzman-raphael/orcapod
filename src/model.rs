@@ -1,3 +1,4 @@
+//! Components of the data model.
 use crate::util::{get_struct_name, hash_buffer};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_yaml::{Mapping, Value};
@@ -9,6 +10,7 @@ use std::{
     path::PathBuf,
 };
 
+/// Converts a model instance into a consistent yaml.
 pub fn to_yaml<T: Serialize>(instance: &T) -> Result<String, Box<dyn Error>> {
     let mapping: BTreeMap<String, Value> =
         serde_yaml::from_str(&serde_yaml::to_string(instance)?)?; // sort
@@ -23,6 +25,7 @@ pub fn to_yaml<T: Serialize>(instance: &T) -> Result<String, Box<dyn Error>> {
     Ok(yaml)
 }
 
+/// Instantiates a model from from yaml content and its unique hash.
 pub fn from_yaml<T: DeserializeOwned>(
     annotation_file: &str,
     spec_file: &str,
@@ -47,12 +50,15 @@ pub fn from_yaml<T: DeserializeOwned>(
 
 // --- core model structs ---
 
-#[derive(Debug, Serialize, Deserialize)]
+/// A reusable, containerized computational unit.
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Pod {
     command: String,
+    /// Metadata that doesn't affect reproducibility.
     pub annotation: Annotation,
     file_content_checksums: BTreeMap<PathBuf, String>,
     // gpu: Option<GPUSpecRequirement>
+    /// Unique id based on reproducibility.
     pub hash: String,
     image: String, // Sha256 of docker image hash
     input_stream_map: BTreeMap<String, PathBuf>, // change this back to KeyInfo later
@@ -72,6 +78,7 @@ pub struct Pod {
 
 impl Pod {
     // todo: default
+    /// Construct a new pod instance.
     pub fn new(
         annotation: Annotation,
         command: String,
@@ -97,7 +104,7 @@ impl Pod {
             annotation,
             command,
             file_content_checksums: checksums,
-            hash: String::from(""),
+            hash: "".to_string(),
             image: resolved_image,
             input_stream_map,
             output_dir,
@@ -116,9 +123,13 @@ impl Pod {
 
 // --- util structs ---
 
-#[derive(Debug, Serialize, Deserialize)]
+/// Standard metadata structure for all model instances.
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Annotation {
+    /// A unique name.
     pub name: String,
+    /// A unique semantic version.
     pub version: String,
+    /// A long form description.
     pub description: String,
 }

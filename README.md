@@ -2,10 +2,12 @@
 
 ### Rust help
 
-#### Run all integration tests
+#### Useful commands
 
 ```bash
-cargo test --test '*' --package=orcapod -- --exact --nocapture
+cargo test --test '*' --package=orcapod -- --exact --nocapture  # Run all integration tests
+cargo llvm-cov --html -- --exact --nocapture  # Run tests + gen code coverage report
+cargo doc --no-deps  # gen api docs
 ```
 
 ### Interesting Docs/Refs

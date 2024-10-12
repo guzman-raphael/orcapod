@@ -1,3 +1,5 @@
+# todo: fix permission issues with gpu DevContainer
+# todo: add fish shell
 # DevContainer image
 FROM nvidia/cuda:12.6.1-cudnn-runtime-ubuntu24.04
 

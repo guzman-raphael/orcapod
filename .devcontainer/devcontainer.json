@@ -31,6 +31,7 @@
 				"ms-vscode.hexeditor", // Binary preview in HEX
 				"tamasfe.even-better-toml", // *.toml language support
 				"eamodio.gitlens" // Git explorer in VSCode
+				// todo: codespell for rust docs
 			]
 		}
 	}
