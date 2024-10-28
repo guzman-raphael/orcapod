@@ -81,7 +81,7 @@ pub fn store_test(store_directory: Option<&str>) -> Result<TestLocalStore> {
 #[derive(Debug)]
 pub struct TestLocallyStoredPod<'base> {
     pub store: &'base TestLocalStore,
-    pod: Pod,
+    pub pod: Pod,
 }
 
 pub fn add_pod_storage(pod: Pod, store: &TestLocalStore) -> Result<TestLocallyStoredPod> {

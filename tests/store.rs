@@ -5,6 +5,7 @@ use fixture::{add_pod_storage, pod_style, store_test};
 use orcapod::{
     error::{OrcaError, Result},
     model::{to_yaml, Pod},
+    store::Store,
 };
 use std::{fs, path::Path};
 use tempfile::tempdir;
@@ -45,5 +46,14 @@ fn verify_pod_save_and_delete() -> Result<()> {
         assert!(is_dir_two_levels_up_empty(&annotation_file)?);
     };
     assert!(!fs::exists(&store_directory)?);
+    Ok(())
+}
+
+#[test]
+fn verify_pod_load() -> Result<()> {
+    let store = store_test(None)?;
+    let stored_pod = add_pod_storage(pod_style()?, &store)?;
+    let loaded_pod = store.load_pod(&stored_pod.annotation.name, &stored_pod.annotation.version)?;
+    assert_eq!(loaded_pod, stored_pod.pod);
     Ok(())
 }

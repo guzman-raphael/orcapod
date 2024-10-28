@@ -4,13 +4,7 @@ use crate::{
 };
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_yaml::{Mapping, Value};
-use std::{
-    collections::BTreeMap,
-    fs,
-    io::{BufRead, BufReader},
-    path::{Path, PathBuf},
-    result,
-};
+use std::{collections::BTreeMap, path::PathBuf};
 /// Converts a model instance into a consistent yaml.
 ///
 /// # Errors
@@ -35,29 +29,22 @@ pub fn to_yaml<T: Serialize>(instance: &T) -> Result<String> {
 /// Will return `Err` if there is an issue converting YAML files for spec+annotation into a model
 /// instance.
 pub fn from_yaml<T: DeserializeOwned>(
-    annotation_file: &Path,
-    spec_file: &Path,
     hash: &str,
+    spec_yaml: &str,
+    annotation_yaml: &str,
 ) -> Result<T> {
-    let annotation: Mapping = serde_yaml::from_str(&fs::read_to_string(annotation_file)?)?;
-    let spec_yaml = BufReader::new(fs::File::open(spec_file)?)
-        .lines()
-        .skip(1)
-        .collect::<result::Result<Vec<_>, _>>()?
-        .join("\n");
+    let annotation: Mapping = serde_yaml::from_str(annotation_yaml)?;
+    let mut spec: BTreeMap<String, Value> = serde_yaml::from_str(spec_yaml)?;
+    spec.insert("annotation".to_owned(), Value::from(annotation));
+    spec.insert("hash".to_owned(), Value::from(hash));
 
-    let mut spec_mapping: BTreeMap<String, Value> = serde_yaml::from_str(&spec_yaml)?;
-    spec_mapping.insert("annotation".to_owned(), Value::from(annotation));
-    spec_mapping.insert("hash".to_owned(), Value::from(hash));
-
-    let instance: T = serde_yaml::from_str(&serde_yaml::to_string(&spec_mapping)?)?;
-    Ok(instance)
+    Ok(serde_yaml::from_str(&serde_yaml::to_string(&spec)?)?)
 }
 
 // --- core model structs ---
 
 /// A reusable, containerized computational unit.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Pod {
     /// Metadata that doesn't affect reproducibility.
     pub annotation: Annotation,
@@ -115,7 +102,7 @@ impl Pod {
 // --- util types ---
 
 /// Standard metadata structure for all model instances.
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq)]
 pub struct Annotation {
     /// A unique name.
     pub name: String,
@@ -125,7 +112,7 @@ pub struct Annotation {
     pub description: String,
 }
 /// Specification for GPU requirements in computation.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct GPURequirement {
     /// GPU model specification.
     pub model: GPUModel,
@@ -135,7 +122,7 @@ pub struct GPURequirement {
     pub count: u16,
 }
 /// GPU model specification.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum GPUModel {
     /// NVIDIA-manufactured card where `String` is the specific model e.g. ???
     NVIDIA(String),
@@ -144,7 +131,7 @@ pub enum GPUModel {
 }
 /// Streams are named and represent an abstration for the file(s) that represent some particular
 /// data.
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct StreamInfo {
     /// Path to stream file.
     pub path: PathBuf,

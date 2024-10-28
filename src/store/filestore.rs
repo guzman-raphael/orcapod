@@ -52,9 +52,9 @@ impl Store for LocalFileStore {
                 })??;
 
         from_yaml::<Pod>(
-            &self.make_annotation_path("pod", &hash, name, version),
-            &self.make_spec_path("pod", &hash),
             &hash,
+            &fs::read_to_string(self.make_spec_path("pod", &hash))?,
+            &fs::read_to_string(self.make_annotation_path("pod", &hash, name, version))?,
         )
     }
 
@@ -150,7 +150,7 @@ impl LocalFileStore {
                 ^.*
                 \/(?<name>[0-9a-zA-Z\-]+)
                 \/
-                    (?<hash>[0-9A-F]+)
+                    (?<hash>[0-9a-f]+)
                     -
                     (?<version>[0-9]+\.[0-9]+\.[0-9]+)
                     \.yaml
