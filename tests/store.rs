@@ -7,7 +7,7 @@ use orcapod::{
     model::{to_yaml, Pod},
     store::Store,
 };
-use std::{fs, path::Path};
+use std::{collections::BTreeMap, fs, path::Path};
 use tempfile::tempdir;
 
 fn is_dir_two_levels_up_empty(file: &Path) -> Result<bool> {
@@ -55,5 +55,19 @@ fn verify_pod_load() -> Result<()> {
     let stored_pod = add_pod_storage(pod_style()?, &store)?;
     let loaded_pod = store.load_pod(&stored_pod.annotation.name, &stored_pod.annotation.version)?;
     assert_eq!(loaded_pod, stored_pod.pod);
+    Ok(())
+}
+
+#[test]
+fn verify_pod_list() -> Result<()> {
+    let store = store_test(None)?;
+    assert_eq!(
+        store.list_pod()?,
+        BTreeMap::from([
+            ("hash".to_owned(), vec![],),
+            ("name".to_owned(), vec![],),
+            ("version".to_owned(), vec![],),
+        ])
+    );
     Ok(())
 }

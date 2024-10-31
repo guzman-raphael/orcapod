@@ -75,6 +75,7 @@ pub fn store_test(store_directory: Option<&str>) -> Result<TestLocalStore> {
     let tmp_directory = String::from(tempdir()?.path().to_string_lossy());
     let store =
         store_directory.map_or_else(|| LocalFileStore::new(tmp_directory), LocalFileStore::new);
+    fs::create_dir_all(&store.directory)?;
     Ok(TestLocalStore { store })
 }
 
