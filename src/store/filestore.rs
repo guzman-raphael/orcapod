@@ -1,5 +1,5 @@
 use crate::{
-    error::{OrcaError, Result},
+    error::{Kind, OrcaError, Result},
     model::{from_yaml, to_yaml, Annotation, Pod},
     store::Store,
     util::get_type_name,
@@ -91,7 +91,7 @@ impl LocalFileStore {
             let filepath_string = String::from(filepath?.to_string_lossy());
             let group = re
                 .captures(&filepath_string)
-                .ok_or_else(OrcaError::no_regex_match)?;
+                .ok_or_else(|| OrcaError::from(Kind::NoRegexMatch))?;
             Ok((
                 group["name"].to_string(),
                 (group["hash"].to_string(), group["version"].to_string()),
@@ -122,7 +122,7 @@ impl LocalFileStore {
         }
         let file_exists = file.exists();
         if file_exists && fail_if_exists {
-            return Err(OrcaError::file_exists(file.to_path_buf()));
+            return Err(OrcaError::from(Kind::FileExists(file.to_path_buf())));
         } else if file_exists {
             println!(
                 "Skip saving `{}` since it is already stored.",
@@ -160,11 +160,11 @@ impl LocalFileStore {
             Self::parse_annotation_path(&self.make_annotation_path(&class, "*", name, version))?
                 .next()
                 .ok_or_else(|| {
-                    OrcaError::no_annotation_found(
+                    OrcaError::from(Kind::NoAnnotationFound(
                         class.clone(),
                         name.to_owned(),
                         version.to_owned(),
-                    )
+                    ))
                 })??;
 
         from_yaml(
@@ -195,17 +195,21 @@ impl LocalFileStore {
         let class = get_type_name::<T>();
         let versions = self.get_version_map::<T>(name)?;
         let hash = versions.get(version).ok_or_else(|| {
-            OrcaError::no_annotation_found(class.clone(), name.to_owned(), version.to_owned())
+            OrcaError::from(Kind::NoAnnotationFound(
+                class.clone(),
+                name.to_owned(),
+                version.to_owned(),
+            ))
         })?;
 
         let annotation_file = self.make_annotation_path(&class, hash, name, version);
         let annotation_dir = annotation_file
             .parent()
-            .ok_or_else(|| OrcaError::file_has_no_parent(annotation_file.clone()))?;
+            .ok_or_else(|| OrcaError::from(Kind::FileHasNoParent(annotation_file.clone())))?;
         let spec_file = self.make_spec_path(&class, hash);
         let spec_dir = spec_file
             .parent()
-            .ok_or_else(|| OrcaError::file_has_no_parent(spec_file.clone()))?;
+            .ok_or_else(|| OrcaError::from(Kind::FileHasNoParent(spec_file.clone())))?;
 
         fs::remove_file(&annotation_file)?;
         if !versions
