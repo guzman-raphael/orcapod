@@ -22,13 +22,20 @@ pub trait Store {
     ///
     /// Will return `Err` if there is an issue querying metadata from existing pods in the store.
     fn list_pod(&self) -> Result<BTreeMap<String, Vec<String>>>;
-    /// How to delete a stored pod (does not propagate).
+    /// How to explicitly delete a stored pod (does not propagate).
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue deleting a pod from the store using `name` and
     /// `version`.
     fn delete_pod(&self, name: &str, version: &str) -> Result<()>;
+    /// How to explicitly delete an annotation.
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if there is an issue deleting an annotation from the store using `name`
+    /// and `version`.
+    fn delete_annotation<T>(&self, name: &str, version: &str) -> Result<()>;
 }
 /// Store implementation on a local filesystem.
 pub mod filestore;

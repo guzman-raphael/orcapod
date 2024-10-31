@@ -35,6 +35,15 @@ impl Store for LocalFileStore {
     fn delete_pod(&self, name: &str, version: &str) -> Result<()> {
         self.delete_model::<Pod>(name, version)
     }
+
+    fn delete_annotation<T>(&self, name: &str, version: &str) -> Result<()> {
+        let hash = self.lookup_hash::<T>(name, version)?;
+        let annotation_file =
+            self.make_path::<T>(&hash, &Self::make_annotation_filename(name, version));
+        fs::remove_file(&annotation_file)?;
+
+        Ok(())
+    }
 }
 
 impl LocalFileStore {
@@ -48,32 +57,20 @@ impl LocalFileStore {
     pub fn get_directory(&self) -> &Path {
         &self.directory
     }
-    /// Path where annotation file is located.
-    pub fn make_annotation_path(
-        &self,
-        class: &str,
-        hash: &str,
-        name: &str,
-        version: &str,
-    ) -> PathBuf {
-        PathBuf::from(format!(
-            "{}/{}/{}/{}/{}-{}.yaml",
-            self.directory.to_string_lossy(),
-            "annotation",
-            class,
-            name,
-            hash,
-            version,
-        ))
+    /// File name where model specification is stored.
+    pub const SPEC_FILENAME: &str = "spec.yaml";
+    /// File name where model annotation is stored.
+    pub fn make_annotation_filename(name: &str, version: &str) -> String {
+        format!("{name}-{version}.yaml")
     }
-    /// Path where specification file is located.
-    pub fn make_spec_path(&self, class: &str, hash: &str) -> PathBuf {
+    /// Build storage path.
+    pub fn make_path<T>(&self, hash: &str, filename: &str) -> PathBuf {
         PathBuf::from(format!(
             "{}/{}/{}/{}",
             self.directory.to_string_lossy(),
-            class,
+            get_type_name::<T>(),
             hash,
-            "spec.yaml",
+            filename,
         ))
     }
 
@@ -83,9 +80,9 @@ impl LocalFileStore {
         let re = Regex::new(
             r"(?x)
             ^.*
-            \/(?<name>[0-9a-zA-Z\-]+)
+            \/(?<hash>[0-9a-f]+)
             \/
-                (?<hash>[0-9a-f]+)
+                (?<name>[0-9a-zA-Z\-]+)
                 -
                 (?<version>[0-9]+\.[0-9]+\.[0-9]+)
                 \.yaml
@@ -104,20 +101,19 @@ impl LocalFileStore {
         Ok(paths)
     }
 
-    fn get_version_map<T>(&self, name: &str) -> Result<BTreeMap<String, String>> {
-        Self::parse_annotation_path(&self.make_annotation_path(
-            &get_type_name::<T>(),
-            "*",
-            name,
-            "*",
-        ))?
-        .map(|metadata| -> Result<(String, String)> {
-            let resolved_metadata = metadata?;
-            let hash = resolved_metadata.1 .0;
-            let version = resolved_metadata.1 .1;
-            Ok((version, hash))
-        })
-        .collect::<Result<BTreeMap<String, String>>>()
+    fn lookup_hash<T>(&self, name: &str, version: &str) -> Result<String> {
+        let (_, (hash, _)) = Self::parse_annotation_path(
+            &self.make_path::<T>("*", &Self::make_annotation_filename(name, version)),
+        )?
+        .next()
+        .ok_or_else(|| {
+            OrcaError::from(Kind::NoAnnotationFound(
+                get_type_name::<T>(),
+                name.to_owned(),
+                version.to_owned(),
+            ))
+        })??;
+        Ok(hash)
     }
 
     fn save_file(file: &Path, content: &str, fail_if_exists: bool) -> Result<()> {
@@ -144,47 +140,40 @@ impl LocalFileStore {
         hash: &str,
         annotation: &Annotation,
     ) -> Result<()> {
-        let class = get_type_name::<T>();
         // Save the annotation file and throw and error if exist
         Self::save_file(
-            &self.make_annotation_path(&class, hash, &annotation.name, &annotation.version),
+            &self.make_path::<T>(
+                hash,
+                &Self::make_annotation_filename(&annotation.name, &annotation.version),
+            ),
             &serde_yaml::to_string(&annotation)?,
             true,
         )?;
         // Save the pod and skip if it already exist, for the case of many annotation to a single pod
-        Self::save_file(&self.make_spec_path(&class, hash), &to_yaml(model)?, false)?;
+        Self::save_file(
+            &self.make_path::<T>(hash, Self::SPEC_FILENAME),
+            &to_yaml(model)?,
+            false,
+        )?;
 
         Ok(())
     }
 
     fn load_model<T: DeserializeOwned>(&self, name: &str, version: &str) -> Result<T> {
-        let class = get_type_name::<T>();
-
-        let (_, (hash, _)) =
-            Self::parse_annotation_path(&self.make_annotation_path(&class, "*", name, version))?
-                .next()
-                .ok_or_else(|| {
-                    OrcaError::from(Kind::NoAnnotationFound(
-                        class.clone(),
-                        name.to_owned(),
-                        version.to_owned(),
-                    ))
-                })??;
-
+        let hash = self.lookup_hash::<T>(name, version)?;
         from_yaml(
             &hash,
-            &fs::read_to_string(self.make_spec_path(&class, &hash))?,
-            &fs::read_to_string(self.make_annotation_path(&class, &hash, name, version))?,
+            &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_FILENAME))?,
+            &fs::read_to_string(
+                self.make_path::<T>(&hash, &Self::make_annotation_filename(name, version)),
+            )?,
         )
     }
 
     fn list_model<T>(&self) -> Result<BTreeMap<String, Vec<String>>> {
-        let (names, (hashes, versions)) = Self::parse_annotation_path(&self.make_annotation_path(
-            &get_type_name::<T>(),
-            "*",
-            "*",
-            "*",
-        ))?
+        let (names, (hashes, versions)) = Self::parse_annotation_path(
+            &self.make_path::<T>("*", &Self::make_annotation_filename("*", "*")),
+        )?
         .collect::<Result<(Vec<_>, (Vec<_>, Vec<_>))>>()?;
 
         Ok(BTreeMap::from([
@@ -196,38 +185,12 @@ impl LocalFileStore {
 
     fn delete_model<T>(&self, name: &str, version: &str) -> Result<()> {
         // assumes propagate = false
-        let class = get_type_name::<T>();
-        let versions = self.get_version_map::<T>(name)?;
-        let hash = versions.get(version).ok_or_else(|| {
-            OrcaError::from(Kind::NoAnnotationFound(
-                class.clone(),
-                name.to_owned(),
-                version.to_owned(),
-            ))
-        })?;
-
-        let annotation_file = self.make_annotation_path(&class, hash, name, version);
-        let annotation_dir = annotation_file
-            .parent()
-            .ok_or_else(|| OrcaError::from(Kind::FileHasNoParent(annotation_file.clone())))?;
-        let spec_file = self.make_spec_path(&class, hash);
+        let hash = self.lookup_hash::<T>(name, version)?;
+        let spec_file = self.make_path::<T>(&hash, Self::SPEC_FILENAME);
         let spec_dir = spec_file
             .parent()
             .ok_or_else(|| OrcaError::from(Kind::FileHasNoParent(spec_file.clone())))?;
-
-        fs::remove_file(&annotation_file)?;
-        if !versions
-            .iter()
-            .any(|(list_version, list_hash)| list_version != version && list_hash == hash)
-        {
-            fs::remove_dir_all(spec_dir)?;
-        }
-        if !versions
-            .iter()
-            .any(|(list_version, _)| list_version != version)
-        {
-            fs::remove_dir_all(annotation_dir)?;
-        }
+        fs::remove_dir_all(spec_dir)?;
 
         Ok(())
     }
