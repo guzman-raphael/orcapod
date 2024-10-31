@@ -1,8 +1,9 @@
 #![expect(clippy::panic_in_result_fn, reason = "Panics OK in tests.")]
 
 pub mod fixture;
-use fixture::{add_pod_storage, pod_style, store_test, Result};
+use fixture::{add_pod_storage, pod_style, store_test};
 use orcapod::{
+    error::Result,
     model::{to_yaml, Pod},
     store::Store,
 };

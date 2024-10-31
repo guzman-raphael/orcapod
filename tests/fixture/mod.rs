@@ -4,14 +4,12 @@
 )]
 
 use orcapod::{
-    error::OrcaError,
+    error::Result,
     model::{Annotation, Pod, StreamInfo},
     store::{filestore::LocalFileStore, Store},
 };
-use std::{collections::BTreeMap, fs, ops::Deref, path::PathBuf, result};
+use std::{collections::BTreeMap, fs, ops::Deref, path::PathBuf};
 use tempfile::tempdir;
-
-pub type Result<T> = result::Result<T, OrcaError>;
 
 pub fn pod_style() -> Result<Pod> {
     Pod::new(
@@ -71,13 +69,13 @@ pub fn store_test(store_directory: Option<&str>) -> Result<TestLocalStore> {
             reason = "Required since can't modify drop signature."
         )]
         fn drop(&mut self) {
-            fs::remove_dir_all(self.store.directory.as_path()).expect("Failed to teardown store.");
+            fs::remove_dir_all(self.store.get_directory()).expect("Failed to teardown store.");
         }
     }
     let tmp_directory = String::from(tempdir()?.path().to_string_lossy());
     let store =
         store_directory.map_or_else(|| LocalFileStore::new(tmp_directory), LocalFileStore::new);
-    fs::create_dir_all(&store.directory)?;
+    fs::create_dir_all(store.get_directory())?;
     Ok(TestLocalStore { store })
 }
 

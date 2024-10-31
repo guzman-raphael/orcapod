@@ -16,7 +16,7 @@ use std::{
 #[derive(Debug)]
 pub struct LocalFileStore {
     /// A local path to a directory where store will be located.
-    pub directory: PathBuf,
+    directory: PathBuf,
 }
 
 impl Store for LocalFileStore {
@@ -38,11 +38,15 @@ impl Store for LocalFileStore {
 }
 
 impl LocalFileStore {
-    /// Construct a local file store instance.
-    pub fn new(directory: impl Into<PathBuf>) -> Self {
+    /// Construct a local file store instance in a specific directory.
+    pub fn new(directory: impl AsRef<Path>) -> Self {
         Self {
-            directory: directory.into(),
+            directory: directory.as_ref().into(),
         }
+    }
+    /// Get the directory where store is located.
+    pub fn get_directory(&self) -> &Path {
+        &self.directory
     }
     /// Path where annotation file is located.
     pub fn make_annotation_path(

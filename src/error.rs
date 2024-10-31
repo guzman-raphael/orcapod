@@ -11,7 +11,7 @@ use std::{
     result,
 };
 /// Shorthand for a Result that returns an `OrcaError`.
-pub(crate) type Result<T> = result::Result<T, OrcaError>;
+pub type Result<T> = result::Result<T, OrcaError>;
 
 /// Possible errors you may encounter.
 #[derive(Debug)]
