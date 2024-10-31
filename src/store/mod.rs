@@ -1,6 +1,12 @@
 use crate::{error::Result, model::Pod};
 use std::collections::BTreeMap;
 
+pub(crate) struct ModelInfo {
+    name: String,
+    version: String,
+    hash: String,
+}
+
 /// Standard behavior of any store backend supported.
 pub trait Store {
     /// How a pod is stored.

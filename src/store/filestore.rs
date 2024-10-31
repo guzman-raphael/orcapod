@@ -1,7 +1,7 @@
 use crate::{
     error::{Kind, OrcaError, Result},
     model::{from_yaml, to_yaml, Annotation, Pod},
-    store::Store,
+    store::{ModelInfo, Store},
     util::get_type_name,
 };
 use colored::Colorize;
@@ -74,9 +74,7 @@ impl LocalFileStore {
         ))
     }
 
-    fn parse_annotation_path(
-        path: &Path,
-    ) -> Result<impl Iterator<Item = Result<(String, (String, String))>>> {
+    fn parse_annotation_path(path: &Path) -> Result<impl Iterator<Item = Result<ModelInfo>>> {
         let re = Regex::new(
             r"(?x)
             ^.*
@@ -93,16 +91,17 @@ impl LocalFileStore {
             let group = re
                 .captures(&filepath_string)
                 .ok_or_else(|| OrcaError::from(Kind::NoRegexMatch))?;
-            Ok((
-                group["name"].to_string(),
-                (group["hash"].to_string(), group["version"].to_string()),
-            ))
+            Ok(ModelInfo {
+                name: group["name"].to_string(),
+                version: group["version"].to_string(),
+                hash: group["hash"].to_string(),
+            })
         });
         Ok(paths)
     }
 
     fn lookup_hash<T>(&self, name: &str, version: &str) -> Result<String> {
-        let (_, (hash, _)) = Self::parse_annotation_path(
+        let model_info = Self::parse_annotation_path(
             &self.make_path::<T>("*", &Self::make_annotation_filename(name, version)),
         )?
         .next()
@@ -113,7 +112,7 @@ impl LocalFileStore {
                 version.to_owned(),
             ))
         })??;
-        Ok(hash)
+        Ok(model_info.hash)
     }
 
     fn save_file(file: &Path, content: &str, fail_if_exists: bool) -> Result<()> {
@@ -174,6 +173,13 @@ impl LocalFileStore {
         let (names, (hashes, versions)) = Self::parse_annotation_path(
             &self.make_path::<T>("*", &Self::make_annotation_filename("*", "*")),
         )?
+        .map(|model_info| {
+            let resolved_model_info = model_info?;
+            Ok((
+                resolved_model_info.name,
+                (resolved_model_info.hash, resolved_model_info.version),
+            ))
+        })
         .collect::<Result<(Vec<_>, (Vec<_>, Vec<_>))>>()?;
 
         Ok(BTreeMap::from([
