@@ -22,6 +22,8 @@ pub(crate) enum Kind {
     NoAnnotationFound(String, String, String),
     /// Returned if a model save was attempted without an annotation set.
     MissingAnnotationOnSave,
+    /// Returned if an annotation delete was attempted on a model's last annotation.
+    DeletingLastAnnotation(String, String, String),
     /// Returned if a regular expression was expected to match.
     NoRegexMatch,
     /// Wrapper around `glob::GlobError`
@@ -55,6 +57,12 @@ impl Display for OrcaError {
             }
             Kind::MissingAnnotationOnSave => {
                 write!(f, "No annotation found when attempting to store.")
+            }
+            Kind::DeletingLastAnnotation(class, name, version) => {
+                write!(
+                    f,
+                    "Attempted to delete the last annotation for `{name}:{version}` {class}."
+                )
             }
             Kind::NoRegexMatch => {
                 write!(f, "No match for regex.")
