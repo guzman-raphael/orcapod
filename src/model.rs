@@ -95,7 +95,7 @@ impl Pod {
             required_gpu,
         };
         Ok(Self {
-            hash: hash(&to_yaml::<Self>(&pod_no_hash)?),
+            hash: hash(&to_yaml(&pod_no_hash)?),
             ..pod_no_hash
         })
     }

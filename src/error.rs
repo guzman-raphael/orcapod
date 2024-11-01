@@ -18,8 +18,6 @@ pub type Result<T> = result::Result<T, OrcaError>;
 pub(crate) enum Kind {
     /// Returned if a file is not expected to exist.
     FileExists(PathBuf),
-    /// Returned if a file is expected to have a parent.
-    FileHasNoParent(PathBuf),
     /// Returned if an annotation was expected to exist.
     NoAnnotationFound(String, String, String),
     /// Returned if a model save was attempted without an annotation set.
@@ -50,13 +48,6 @@ impl Display for OrcaError {
                     f,
                     "File `{}` already exists.",
                     path.to_string_lossy().bright_cyan()
-                )
-            }
-            Kind::FileHasNoParent(path) => {
-                write!(
-                    f,
-                    "File `{}` has no parent.",
-                    path.to_string_lossy().bright_red()
                 )
             }
             Kind::NoAnnotationFound(class, name, version) => {

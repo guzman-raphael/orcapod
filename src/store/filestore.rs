@@ -30,7 +30,7 @@ impl Store for LocalFileStore {
         )
     }
 
-    fn load_pod(&self, model_id: ModelID) -> Result<Pod> {
+    fn load_pod(&self, model_id: &ModelID) -> Result<Pod> {
         self.load_model(model_id)
     }
 
@@ -38,14 +38,14 @@ impl Store for LocalFileStore {
         self.list_model::<Pod>()
     }
 
-    fn delete_pod(&self, model_id: ModelID) -> Result<()> {
+    fn delete_pod(&self, model_id: &ModelID) -> Result<()> {
         self.delete_model::<Pod>(model_id)
     }
 
     fn delete_annotation<T>(&self, name: &str, version: &str) -> Result<()> {
         let hash = self.lookup_hash::<T>(name, version)?;
         let annotation_file =
-            self.make_path::<T>(&hash, &Self::make_annotation_filename(name, version));
+            self.make_path::<T>(&hash, &Self::make_annotation_relpath(name, version));
         fs::remove_file(&annotation_file)?;
 
         Ok(())
@@ -64,32 +64,34 @@ impl LocalFileStore {
         &self.directory
     }
     /// File name where model specification is stored.
-    pub const SPEC_FILENAME: &str = "spec.yaml";
+    pub const SPEC_RELPATH: &str = "spec.yaml";
     /// File name where model annotation is stored.
-    pub fn make_annotation_filename(name: &str, version: &str) -> String {
-        format!("{name}-{version}.yaml")
+    pub fn make_annotation_relpath(name: &str, version: &str) -> PathBuf {
+        PathBuf::from(format!("annotation/{name}-{version}.yaml"))
     }
     /// Build storage path.
-    pub fn make_path<T>(&self, hash: &str, filename: &str) -> PathBuf {
+    pub fn make_path<T>(&self, hash: &str, relpath: impl AsRef<Path>) -> PathBuf {
         PathBuf::from(format!(
-            "{}/{}/{}/{}",
+            "{}/{}/{}",
             self.directory.to_string_lossy(),
             get_type_name::<T>(),
-            hash,
-            filename,
+            hash
         ))
+        .join(relpath)
     }
 
     fn parse_annotation_path(path: &Path) -> Result<impl Iterator<Item = Result<ModelInfo>>> {
         let re = Regex::new(
             r"(?x)
             ^.*
-            \/(?<hash>[0-9a-f]+)
-            \/
-                (?<name>[0-9a-zA-Z\-]+)
-                -
-                (?<version>[0-9]+\.[0-9]+\.[0-9]+)
-                \.yaml
+            \/(?<class>[a-z_]+)
+                \/(?<hash>[0-9a-f]+)
+                    \/annotation
+                        \/
+                        (?<name>[0-9a-zA-Z\-]+)
+                        -
+                        (?<version>[0-9]+\.[0-9]+\.[0-9]+)
+                        \.yaml
             $",
         )?;
         let paths = glob::glob(&path.to_string_lossy())?.map(move |filepath| {
@@ -108,7 +110,7 @@ impl LocalFileStore {
 
     fn lookup_hash<T>(&self, name: &str, version: &str) -> Result<String> {
         let model_info = Self::parse_annotation_path(
-            &self.make_path::<T>("*", &Self::make_annotation_filename(name, version)),
+            &self.make_path::<T>("*", &Self::make_annotation_relpath(name, version)),
         )?
         .next()
         .ok_or_else(|| {
@@ -121,20 +123,26 @@ impl LocalFileStore {
         Ok(model_info.hash)
     }
 
-    fn save_file(file: &Path, content: &str, fail_if_exists: bool) -> Result<()> {
-        if let Some(parent) = file.parent() {
+    fn save_file(
+        file: impl AsRef<Path>,
+        content: impl AsRef<[u8]>,
+        fail_if_exists: bool,
+    ) -> Result<()> {
+        if let Some(parent) = file.as_ref().parent() {
             fs::create_dir_all(parent)?;
         }
-        let file_exists = file.exists();
+        let file_exists = file.as_ref().exists();
         if file_exists && fail_if_exists {
-            return Err(OrcaError::from(Kind::FileExists(file.to_path_buf())));
+            return Err(OrcaError::from(Kind::FileExists(
+                file.as_ref().to_path_buf(),
+            )));
         } else if file_exists {
             println!(
                 "Skip saving `{}` since it is already stored.",
-                file.to_string_lossy().bright_cyan(),
+                file.as_ref().to_string_lossy().bright_cyan(),
             );
         } else {
-            fs::write(file, content)?;
+            fs::write(file.as_ref(), content)?;
         }
         Ok(())
     }
@@ -147,16 +155,16 @@ impl LocalFileStore {
     ) -> Result<()> {
         // Save the annotation file and throw and error if exist
         Self::save_file(
-            &self.make_path::<T>(
+            self.make_path::<T>(
                 hash,
-                &Self::make_annotation_filename(&annotation.name, &annotation.version),
+                &Self::make_annotation_relpath(&annotation.name, &annotation.version),
             ),
             &serde_yaml::to_string(&annotation)?,
             true,
         )?;
         // Save the pod and skip if it already exist, for the case of many annotation to a single pod
         Self::save_file(
-            &self.make_path::<T>(hash, Self::SPEC_FILENAME),
+            self.make_path::<T>(hash, Self::SPEC_RELPATH),
             &to_yaml(model)?,
             false,
         )?;
@@ -164,21 +172,21 @@ impl LocalFileStore {
         Ok(())
     }
 
-    fn load_model<T: DeserializeOwned>(&self, model_id: ModelID) -> Result<T> {
+    fn load_model<T: DeserializeOwned>(&self, model_id: &ModelID) -> Result<T> {
         match model_id {
             ModelID::Hash(hash) => from_yaml(
-                &hash,
-                &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_FILENAME))?,
+                hash,
+                &fs::read_to_string(self.make_path::<T>(hash, Self::SPEC_RELPATH))?,
                 None,
             ),
             ModelID::Annotation(name, version) => {
-                let hash = self.lookup_hash::<T>(&name, &version)?;
+                let hash = self.lookup_hash::<T>(name, version)?;
                 from_yaml(
                     &hash,
-                    &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_FILENAME))?,
+                    &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_RELPATH))?,
                     Some(&fs::read_to_string(self.make_path::<T>(
                         &hash,
-                        &Self::make_annotation_filename(&name, &version),
+                        &Self::make_annotation_relpath(name, version),
                     ))?),
                 )
             }
@@ -187,7 +195,7 @@ impl LocalFileStore {
 
     fn list_model<T>(&self) -> Result<BTreeMap<String, Vec<String>>> {
         let (names, (hashes, versions)) = Self::parse_annotation_path(
-            &self.make_path::<T>("*", &Self::make_annotation_filename("*", "*")),
+            &self.make_path::<T>("*", &Self::make_annotation_relpath("*", "*")),
         )?
         .map(|model_info| {
             let resolved_model_info = model_info?;
@@ -205,16 +213,13 @@ impl LocalFileStore {
         ]))
     }
 
-    fn delete_model<T>(&self, model_id: ModelID) -> Result<()> {
+    fn delete_model<T>(&self, model_id: &ModelID) -> Result<()> {
         // assumes propagate = false
         let hash = match model_id {
             ModelID::Hash(hash) => hash,
-            ModelID::Annotation(name, version) => self.lookup_hash::<T>(&name, &version)?,
+            ModelID::Annotation(name, version) => &self.lookup_hash::<T>(name, version)?,
         };
-        let spec_file = self.make_path::<T>(&hash, Self::SPEC_FILENAME);
-        let spec_dir = spec_file
-            .parent()
-            .ok_or_else(|| OrcaError::from(Kind::FileHasNoParent(spec_file.clone())))?;
+        let spec_dir = self.make_path::<T>(hash, "");
         fs::remove_dir_all(spec_dir)?;
 
         Ok(())

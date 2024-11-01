@@ -92,7 +92,7 @@ pub fn add_pod_storage(pod: Pod, store: &TestLocalStore) -> Result<TestLocallySt
     impl<'base> Drop for TestLocallyStoredPod<'base> {
         fn drop(&mut self) {
             self.store
-                .delete_pod(ModelID::Hash(self.pod.hash.clone()))
+                .delete_pod(&ModelID::Hash(self.pod.hash.clone()))
                 .expect("Failed to teardown pod.");
         }
     }

@@ -11,8 +11,15 @@ use orcapod::{
 use std::{collections::BTreeMap, fs, path::Path};
 use tempfile::tempdir;
 
-fn is_dir_two_levels_up_empty(file: &Path) -> Option<bool> {
-    Some(file.parent()?.parent()?.read_dir().ok()?.next().is_none())
+fn is_dir_empty(file: &Path, levels_up: usize) -> Option<bool> {
+    Some(
+        file.ancestors()
+            .nth(levels_up)?
+            .read_dir()
+            .ok()?
+            .next()
+            .is_none(),
+    )
 }
 
 #[test]
@@ -27,9 +34,9 @@ fn verify_pod_save_and_delete() -> Result<()> {
             .expect("Annotation missing from `pod_style`");
         let annotation_file = store.make_path::<Pod>(
             &pod_style.hash,
-            &LocalFileStore::make_annotation_filename(&annotation.name, &annotation.version),
+            &LocalFileStore::make_annotation_relpath(&annotation.name, &annotation.version),
         );
-        let spec_file = store.make_path::<Pod>(&pod_style.hash, LocalFileStore::SPEC_FILENAME);
+        let spec_file = store.make_path::<Pod>(&pod_style.hash, LocalFileStore::SPEC_RELPATH);
         {
             let pod = add_pod_storage(pod_style, &store)?;
             assert!(spec_file.exists());
@@ -38,8 +45,8 @@ fn verify_pod_save_and_delete() -> Result<()> {
         };
         assert!(!spec_file.exists());
         assert!(!annotation_file.exists());
-        assert_eq!(is_dir_two_levels_up_empty(&spec_file), Some(true));
-        assert_eq!(is_dir_two_levels_up_empty(&annotation_file), Some(true));
+        assert_eq!(is_dir_empty(&spec_file, 2), Some(true));
+        assert_eq!(is_dir_empty(&annotation_file, 3), Some(true));
     };
     assert!(!fs::exists(&store_directory)?);
     Ok(())
@@ -53,7 +60,7 @@ fn verify_pod_load() -> Result<()> {
         .annotation
         .as_ref()
         .expect("Annotation missing from `pod_style`");
-    let loaded_pod = store.load_pod(ModelID::Annotation(
+    let loaded_pod = store.load_pod(&ModelID::Annotation(
         annotation.name.clone(),
         annotation.version.clone(),
     ))?;

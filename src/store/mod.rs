@@ -29,7 +29,7 @@ pub trait Store {
     ///
     /// Will return `Err` if there is an issue loading a pod from the store using `name` and
     /// `version`.
-    fn load_pod(&self, model_id: ModelID) -> Result<Pod>;
+    fn load_pod(&self, model_id: &ModelID) -> Result<Pod>;
     /// How to query stored pods.
     ///
     /// # Errors
@@ -42,7 +42,7 @@ pub trait Store {
     ///
     /// Will return `Err` if there is an issue deleting a pod from the store using `name` and
     /// `version`.
-    fn delete_pod(&self, model_id: ModelID) -> Result<()>;
+    fn delete_pod(&self, model_id: &ModelID) -> Result<()>;
     /// How to explicitly delete an annotation.
     ///
     /// # Errors
