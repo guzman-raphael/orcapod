@@ -36,7 +36,7 @@ pub trait Store {
     ///
     /// Will return `Err` if there is an issue querying metadata from existing pods in the store.
     fn list_pod(&self) -> Result<BTreeMap<String, Vec<String>>>;
-    /// How to explicitly delete a stored pod (does not propagate).
+    /// How to explicitly delete a stored pod and all associated annotations (does not propagate).
     ///
     /// # Errors
     ///

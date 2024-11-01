@@ -63,13 +63,13 @@ impl LocalFileStore {
     pub fn get_directory(&self) -> &Path {
         &self.directory
     }
-    /// File name where model specification is stored.
+    /// Relative path where model specification is stored within the model directory.
     pub const SPEC_RELPATH: &str = "spec.yaml";
-    /// File name where model annotation is stored.
+    /// Relative path where model annotation is stored within the model directory.
     pub fn make_annotation_relpath(name: &str, version: &str) -> PathBuf {
         PathBuf::from(format!("annotation/{name}-{version}.yaml"))
     }
-    /// Build storage path.
+    /// Build the storage path with the model directory (`hash`) and a file's relative path.
     pub fn make_path<T>(&self, hash: &str, relpath: impl AsRef<Path>) -> PathBuf {
         PathBuf::from(format!(
             "{}/{}/{}",
@@ -142,7 +142,7 @@ impl LocalFileStore {
                 file.as_ref().to_string_lossy().bright_cyan(),
             );
         } else {
-            fs::write(file.as_ref(), content)?;
+            fs::write(file, content)?;
         }
         Ok(())
     }
