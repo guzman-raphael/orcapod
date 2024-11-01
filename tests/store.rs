@@ -1,12 +1,12 @@
 #![expect(clippy::panic_in_result_fn, reason = "Panics OK in tests.")]
+#![expect(clippy::expect_used, reason = "Expect OK in tests.")]
 
 pub mod fixture;
 use fixture::{add_pod_storage, pod_style, store_test};
 use orcapod::{
     error::Result,
     model::{to_yaml, Pod},
-    store::filestore::LocalFileStore,
-    store::Store,
+    store::{filestore::LocalFileStore, ModelID, Store},
 };
 use std::{collections::BTreeMap, fs, path::Path};
 use tempfile::tempdir;
@@ -21,12 +21,13 @@ fn verify_pod_save_and_delete() -> Result<()> {
     {
         let pod_style = pod_style()?;
         let store = store_test(Some(&store_directory))?; // new tests can just call store_test(None)?
+        let annotation = pod_style
+            .annotation
+            .as_ref()
+            .expect("Annotation missing from `pod_style`");
         let annotation_file = store.make_path::<Pod>(
             &pod_style.hash,
-            &LocalFileStore::make_annotation_filename(
-                &pod_style.annotation.name,
-                &pod_style.annotation.version,
-            ),
+            &LocalFileStore::make_annotation_filename(&annotation.name, &annotation.version),
         );
         let spec_file = store.make_path::<Pod>(&pod_style.hash, LocalFileStore::SPEC_FILENAME);
         {
@@ -48,7 +49,14 @@ fn verify_pod_save_and_delete() -> Result<()> {
 fn verify_pod_load() -> Result<()> {
     let store = store_test(None)?;
     let stored_pod = add_pod_storage(pod_style()?, &store)?;
-    let loaded_pod = store.load_pod(&stored_pod.annotation.name, &stored_pod.annotation.version)?;
+    let annotation = stored_pod
+        .annotation
+        .as_ref()
+        .expect("Annotation missing from `pod_style`");
+    let loaded_pod = store.load_pod(ModelID::Annotation(
+        annotation.name.clone(),
+        annotation.version.clone(),
+    ))?;
     assert_eq!(loaded_pod, stored_pod.pod);
     Ok(())
 }

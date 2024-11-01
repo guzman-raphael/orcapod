@@ -1,7 +1,7 @@
 use crate::{
     error::{Kind, OrcaError, Result},
     model::{from_yaml, to_yaml, Annotation, Pod},
-    store::{ModelInfo, Store},
+    store::{ModelID, ModelInfo, Store},
     util::get_type_name,
 };
 use colored::Colorize;
@@ -21,19 +21,25 @@ pub struct LocalFileStore {
 
 impl Store for LocalFileStore {
     fn save_pod(&self, pod: &Pod) -> Result<()> {
-        self.save_model(pod, &pod.hash, &pod.annotation)
+        self.save_model(
+            pod,
+            &pod.hash,
+            pod.annotation
+                .as_ref()
+                .ok_or_else(|| OrcaError::from(Kind::MissingAnnotationOnSave))?,
+        )
     }
 
-    fn load_pod(&self, name: &str, version: &str) -> Result<Pod> {
-        self.load_model(name, version)
+    fn load_pod(&self, model_id: ModelID) -> Result<Pod> {
+        self.load_model(model_id)
     }
 
     fn list_pod(&self) -> Result<BTreeMap<String, Vec<String>>> {
         self.list_model::<Pod>()
     }
 
-    fn delete_pod(&self, name: &str, version: &str) -> Result<()> {
-        self.delete_model::<Pod>(name, version)
+    fn delete_pod(&self, model_id: ModelID) -> Result<()> {
+        self.delete_model::<Pod>(model_id)
     }
 
     fn delete_annotation<T>(&self, name: &str, version: &str) -> Result<()> {
@@ -158,15 +164,25 @@ impl LocalFileStore {
         Ok(())
     }
 
-    fn load_model<T: DeserializeOwned>(&self, name: &str, version: &str) -> Result<T> {
-        let hash = self.lookup_hash::<T>(name, version)?;
-        from_yaml(
-            &hash,
-            &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_FILENAME))?,
-            &fs::read_to_string(
-                self.make_path::<T>(&hash, &Self::make_annotation_filename(name, version)),
-            )?,
-        )
+    fn load_model<T: DeserializeOwned>(&self, model_id: ModelID) -> Result<T> {
+        match model_id {
+            ModelID::Hash(hash) => from_yaml(
+                &hash,
+                &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_FILENAME))?,
+                None,
+            ),
+            ModelID::Annotation(name, version) => {
+                let hash = self.lookup_hash::<T>(&name, &version)?;
+                from_yaml(
+                    &hash,
+                    &fs::read_to_string(self.make_path::<T>(&hash, Self::SPEC_FILENAME))?,
+                    Some(&fs::read_to_string(self.make_path::<T>(
+                        &hash,
+                        &Self::make_annotation_filename(&name, &version),
+                    ))?),
+                )
+            }
+        }
     }
 
     fn list_model<T>(&self) -> Result<BTreeMap<String, Vec<String>>> {
@@ -189,9 +205,12 @@ impl LocalFileStore {
         ]))
     }
 
-    fn delete_model<T>(&self, name: &str, version: &str) -> Result<()> {
+    fn delete_model<T>(&self, model_id: ModelID) -> Result<()> {
         // assumes propagate = false
-        let hash = self.lookup_hash::<T>(name, version)?;
+        let hash = match model_id {
+            ModelID::Hash(hash) => hash,
+            ModelID::Annotation(name, version) => self.lookup_hash::<T>(&name, &version)?,
+        };
         let spec_file = self.make_path::<T>(&hash, Self::SPEC_FILENAME);
         let spec_dir = spec_file
             .parent()

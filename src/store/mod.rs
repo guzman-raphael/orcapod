@@ -1,6 +1,14 @@
 use crate::{error::Result, model::Pod};
 use std::collections::BTreeMap;
 
+/// Options for identifying a model.
+pub enum ModelID {
+    /// Identifying by the hash value of a model as a string.
+    Hash(String),
+    /// Identifying by the `(name, version)` of an annotation for a model as strings.
+    Annotation(String, String),
+}
+
 pub(crate) struct ModelInfo {
     name: String,
     version: String,
@@ -21,7 +29,7 @@ pub trait Store {
     ///
     /// Will return `Err` if there is an issue loading a pod from the store using `name` and
     /// `version`.
-    fn load_pod(&self, name: &str, version: &str) -> Result<Pod>;
+    fn load_pod(&self, model_id: ModelID) -> Result<Pod>;
     /// How to query stored pods.
     ///
     /// # Errors
@@ -34,7 +42,7 @@ pub trait Store {
     ///
     /// Will return `Err` if there is an issue deleting a pod from the store using `name` and
     /// `version`.
-    fn delete_pod(&self, name: &str, version: &str) -> Result<()>;
+    fn delete_pod(&self, model_id: ModelID) -> Result<()>;
     /// How to explicitly delete an annotation.
     ///
     /// # Errors

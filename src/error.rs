@@ -22,12 +22,14 @@ pub(crate) enum Kind {
     FileHasNoParent(PathBuf),
     /// Returned if an annotation was expected to exist.
     NoAnnotationFound(String, String, String),
+    /// Returned if a model save was attempted without an annotation set.
+    MissingAnnotationOnSave,
     /// Returned if a regular expression was expected to match.
     NoRegexMatch,
     /// Wrapper around `glob::GlobError`
     GlobError(glob::GlobError),
     /// Wrapper around `glob::PatternError`
-    GlobPaternError(glob::PatternError),
+    GlobPatternError(glob::PatternError),
     /// Wrapper around `regex::Error`
     RegexError(regex::Error),
     /// Wrapper around `serde_yaml::Error`
@@ -60,11 +62,14 @@ impl Display for OrcaError {
             Kind::NoAnnotationFound(class, name, version) => {
                 write!(f, "No annotation found for `{name}:{version}` {class}.")
             }
+            Kind::MissingAnnotationOnSave => {
+                write!(f, "No annotation found when attempting to store.")
+            }
             Kind::NoRegexMatch => {
                 write!(f, "No match for regex.")
             }
             Kind::GlobError(error) => write!(f, "{error}"),
-            Kind::GlobPaternError(error) => write!(f, "{error}"),
+            Kind::GlobPatternError(error) => write!(f, "{error}"),
             Kind::SerdeYamlError(error) => write!(f, "{error}"),
             Kind::RegexError(error) => write!(f, "{error}"),
             Kind::IoError(error) => write!(f, "{error}"),
@@ -78,7 +83,7 @@ impl From<glob::GlobError> for OrcaError {
 }
 impl From<glob::PatternError> for OrcaError {
     fn from(error: glob::PatternError) -> Self {
-        Self(Kind::GlobPaternError(error))
+        Self(Kind::GlobPatternError(error))
     }
 }
 impl From<serde_yaml::Error> for OrcaError {

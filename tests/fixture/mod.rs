@@ -1,3 +1,4 @@
+#![expect(clippy::expect_used, reason = "Expect OK in tests.")]
 #![expect(
     clippy::missing_errors_doc,
     reason = "Integration tests won't be included in documentation."
@@ -6,18 +7,13 @@
 use orcapod::{
     error::Result,
     model::{Annotation, Pod, StreamInfo},
-    store::{filestore::LocalFileStore, Store},
+    store::{filestore::LocalFileStore, ModelID, Store},
 };
 use std::{collections::BTreeMap, fs, ops::Deref, path::PathBuf};
 use tempfile::tempdir;
 
 pub fn pod_style() -> Result<Pod> {
     Pod::new(
-        Annotation {
-            name: "style-transfer".to_owned(),
-            description: "This is an example pod.".to_owned(),
-            version: "0.67.0".to_owned(),
-        },
         "https://github.com/zenml-io/zenml/tree/0.67.0".to_owned(),
         "zenmldocker/zenml-server:0.67.0".to_owned(),
         "tail -f /dev/null".to_owned(),
@@ -47,6 +43,11 @@ pub fn pod_style() -> Result<Pod> {
         )]),
         0.25,                // 250 millicores as frac cores
         (2_u64) * (1 << 30), // 2GiB in bytes
+        Some(Annotation {
+            name: "style-transfer".to_owned(),
+            description: "This is an example pod.".to_owned(),
+            version: "0.67.0".to_owned(),
+        }),
         None,
     )
 }
@@ -64,10 +65,6 @@ pub fn store_test(store_directory: Option<&str>) -> Result<TestLocalStore> {
         }
     }
     impl Drop for TestLocalStore {
-        #[expect(
-            clippy::expect_used,
-            reason = "Required since can't modify drop signature."
-        )]
         fn drop(&mut self) {
             fs::remove_dir_all(self.store.get_directory()).expect("Failed to teardown store.");
         }
@@ -93,13 +90,9 @@ pub fn add_pod_storage(pod: Pod, store: &TestLocalStore) -> Result<TestLocallySt
         }
     }
     impl<'base> Drop for TestLocallyStoredPod<'base> {
-        #[expect(
-            clippy::expect_used,
-            reason = "Required since can't modify drop signature."
-        )]
         fn drop(&mut self) {
             self.store
-                .delete_pod(&self.pod.annotation.name, &self.pod.annotation.version)
+                .delete_pod(ModelID::Hash(self.pod.hash.clone()))
                 .expect("Failed to teardown pod.");
         }
     }
