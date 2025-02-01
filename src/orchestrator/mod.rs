@@ -50,23 +50,28 @@ pub struct RunInfo {
     pub memory_limit: u64,
 }
 /// API for orchestrator associated types e.g. allows field indexing for structs.
-pub trait Types
+pub trait Types<'orch>
 where
-    Self::Orchestrator: API + Types<Orchestrator = Self::Orchestrator>,
+    Self::Orchestrator:
+        API<'orch> + Types<'orch, Orchestrator = Self::Orchestrator, PodRun = Self::PodRun>,
+    Self::PodRun:
+        PodRunAPI<'orch> + Types<'orch, Orchestrator = Self::Orchestrator, PodRun = Self::PodRun>,
 {
     /// A type alias pointing to a concrete type that implements the orchestrator API.
     type Orchestrator;
+    /// A type alias pointing to a concrete type that implements the pod run API.
+    type PodRun;
 }
 /// Current computation managed by orchestrator.
 #[derive(Debug)]
-pub struct PodRun<'orch, T: Types> {
+pub struct PodRun<'orch, T: Types<'orch>> {
     /// Original compute request.
     pub pod_job: PodJob,
     /// The orchestrator that is managing the compute run.
     pub orchestrator: &'orch T::Orchestrator,
 }
 /// API to access `PodRun`-specific orchestrator functionality.
-pub trait PodRunAPI: Types {
+pub trait PodRunAPI<'orch>: Types<'orch> {
     /// How to create a pod run.
     ///
     /// # Errors
@@ -74,7 +79,7 @@ pub trait PodRunAPI: Types {
     /// Will return `Err` if there is an issue creating a pod run.
     fn new(
         pod_job: PodJob,
-        orchestrator: &Self::Orchestrator,
+        orchestrator: &'orch Self::Orchestrator,
     ) -> Result<PodRun<Self::Orchestrator>> {
         Ok(PodRun {
             pod_job,
@@ -102,31 +107,35 @@ pub trait PodRunAPI: Types {
 }
 
 /// API for standard behavior of any container orchestration engine supported.
-pub trait API {
+pub trait API<'orch>: Types<'orch> {
     /// How to start containers. Assumes `PodJob` image is published.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue starting the container.
-    fn start(&self, pod_job: &PodJob) -> Result<impl PodRunAPI>;
+    fn start(&'orch self, pod_job: &PodJob) -> Result<Self::PodRun>;
     /// How to start containers with an alternate image.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue starting the container.
-    fn start_with_altimage(&self, pod_job: &PodJob, image: &ImageKind) -> Result<impl PodRunAPI>;
+    fn start_with_altimage(
+        &'orch self,
+        pod_job: &PodJob,
+        image: &ImageKind,
+    ) -> Result<Self::PodRun>;
     /// How to query containers.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue querying metadata from containers.
-    fn list(&self) -> Result<Vec<impl PodRunAPI>>;
+    fn list(&'orch self) -> Result<Vec<Self::PodRun>>;
     /// How to delete containers.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue deleting a container.
-    fn delete(&self, pod_run: &impl PodRunAPI) -> Result<()>;
+    fn delete(&self, pod_run: &Self::PodRun) -> Result<()>;
 }
 
 /// Orchestration implementation for Docker backend.
