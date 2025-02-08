@@ -49,38 +49,34 @@ pub struct RunInfo {
     /// Assigned memory limit in bytes for the computation.
     pub memory_limit: u64,
 }
-/// API for orchestrator associated types e.g. allows field indexing for structs.
-pub trait Types<'orch>
-where
-    Self::Orchestrator:
-        API<'orch> + Types<'orch, Orchestrator = Self::Orchestrator, PodRun = Self::PodRun>,
-    Self::PodRun:
-        PodRunAPI<'orch> + Types<'orch, Orchestrator = Self::Orchestrator, PodRun = Self::PodRun>,
-{
-    /// A type alias pointing to a concrete type that implements the orchestrator API.
-    type Orchestrator;
-    /// A type alias pointing to a concrete type that implements the pod run API.
-    type PodRun;
-}
 /// Current computation managed by orchestrator.
 #[derive(Debug)]
-pub struct PodRun<'orch, T: Types<'orch>> {
+pub struct PodRun<'orch, T>
+where
+    T: API<'orch>,
+    Self: PodRunAPI<'orch, T>,
+{
     /// Original compute request.
     pub pod_job: PodJob,
     /// The orchestrator that is managing the compute run.
-    pub orchestrator: &'orch T::Orchestrator,
+    pub orchestrator: &'orch T,
 }
 /// API to access `PodRun`-specific orchestrator functionality.
-pub trait PodRunAPI<'orch>: Types<'orch> {
+#[expect(
+    clippy::new_ret_no_self,
+    reason = "Self not allowed in trait default function."
+)]
+pub trait PodRunAPI<'orch, T>
+where
+    T: API<'orch>,
+    PodRun<'orch, T>: PodRunAPI<'orch, T> + 'orch,
+{
     /// How to create a pod run.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue creating a pod run.
-    fn new(
-        pod_job: PodJob,
-        orchestrator: &'orch Self::Orchestrator,
-    ) -> Result<PodRun<Self::Orchestrator>> {
+    fn new(pod_job: PodJob, orchestrator: &'orch T) -> Result<PodRun<T>> {
         Ok(PodRun {
             pod_job,
             orchestrator,
@@ -107,13 +103,16 @@ pub trait PodRunAPI<'orch>: Types<'orch> {
 }
 
 /// API for standard behavior of any container orchestration engine supported.
-pub trait API<'orch>: Types<'orch> {
+pub trait API<'orch>: Sized
+where
+    PodRun<'orch, Self>: PodRunAPI<'orch, Self> + 'orch,
+{
     /// How to start containers. Assumes `PodJob` image is published.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue starting the container.
-    fn start(&'orch self, pod_job: &PodJob) -> Result<Self::PodRun>;
+    fn start(&'orch self, pod_job: &PodJob) -> Result<PodRun<'orch, Self>>;
     /// How to start containers with an alternate image.
     ///
     /// # Errors
@@ -123,19 +122,19 @@ pub trait API<'orch>: Types<'orch> {
         &'orch self,
         pod_job: &PodJob,
         image: &ImageKind,
-    ) -> Result<Self::PodRun>;
+    ) -> Result<PodRun<'orch, Self>>;
     /// How to query containers.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue querying metadata from containers.
-    fn list(&'orch self) -> Result<Vec<Self::PodRun>>;
+    fn list(&'orch self) -> Result<Vec<PodRun<'orch, Self>>>;
     /// How to delete containers.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue deleting a container.
-    fn delete(&self, pod_run: &Self::PodRun) -> Result<()>;
+    fn delete(&self, pod_run: &PodRun<'orch, Self>) -> Result<()>;
 }
 
 /// Orchestration implementation for Docker backend.
