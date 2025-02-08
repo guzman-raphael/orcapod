@@ -39,7 +39,7 @@ pub struct LocalDockerOrchestrator {
     async_driver: Runtime,
 }
 
-impl<'orch> PodRunAPI<'orch, LocalDockerOrchestrator> for PodRun<'orch, LocalDockerOrchestrator> {
+impl PodRunAPI for PodRun<'_, LocalDockerOrchestrator> {
     fn get_info(&self) -> Result<RunInfo> {
         self.orchestrator
             .async_driver
@@ -94,7 +94,10 @@ impl<'orch> orchestrator::API<'orch> for LocalDockerOrchestrator {
                     .hash
                     .clone_from(&run_info.labels["org.orcapod.pod_job.hash"]);
                 pod_job.pod = pod;
-                PodRun::new(pod_job, self)
+                Ok(PodRun {
+                    pod_job,
+                    orchestrator: self,
+                })
             })
             .collect()
     }
@@ -122,7 +125,10 @@ impl<'orch> orchestrator::API<'orch> for LocalDockerOrchestrator {
             )
             .await
         })?;
-        PodRun::new(pod_job.clone(), self)
+        Ok(PodRun {
+            pod_job: pod_job.clone(),
+            orchestrator: self,
+        })
     }
     fn delete(&self, pod_run: &PodRun<'orch, Self>) -> Result<()> {
         self.async_driver.block_on(self.api.remove_container(
@@ -232,7 +238,10 @@ impl LocalDockerOrchestrator {
         self.api
             .start_container(&container_name, None::<StartContainerOptions<String>>)
             .await?;
-        PodRun::new(pod_job.clone(), self)
+        Ok(PodRun {
+            pod_job: pod_job.clone(),
+            orchestrator: self,
+        })
     }
 
     #[expect(

@@ -54,7 +54,7 @@ pub struct RunInfo {
 pub struct PodRun<'orch, T>
 where
     T: API<'orch>,
-    Self: PodRunAPI<'orch, T>,
+    Self: PodRunAPI,
 {
     /// Original compute request.
     pub pod_job: PodJob,
@@ -62,26 +62,7 @@ where
     pub orchestrator: &'orch T,
 }
 /// API to access `PodRun`-specific orchestrator functionality.
-#[expect(
-    clippy::new_ret_no_self,
-    reason = "Self not allowed in trait default function."
-)]
-pub trait PodRunAPI<'orch, T>
-where
-    T: API<'orch>,
-    PodRun<'orch, T>: PodRunAPI<'orch, T> + 'orch,
-{
-    /// How to create a pod run.
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if there is an issue creating a pod run.
-    fn new(pod_job: PodJob, orchestrator: &'orch T) -> Result<PodRun<T>> {
-        Ok(PodRun {
-            pod_job,
-            orchestrator,
-        })
-    }
+pub trait PodRunAPI {
     /// How to get container info if still in orchestrator memory.
     ///
     /// # Errors
@@ -105,7 +86,8 @@ where
 /// API for standard behavior of any container orchestration engine supported.
 pub trait API<'orch>: Sized
 where
-    PodRun<'orch, Self>: PodRunAPI<'orch, Self> + 'orch,
+    PodRun<'orch, Self>: PodRunAPI,
+    Self: 'orch,
 {
     /// How to start containers. Assumes `PodJob` image is published.
     ///
