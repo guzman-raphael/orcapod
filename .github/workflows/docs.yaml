@@ -9,6 +9,15 @@ jobs:
       github.event.pusher.name != 'actions-pusher'
     runs-on: ubuntu-latest
     steps:
+      - name: Debug
+        env:
+          TEST_NAME: ${{ github.event.pusher.name }}
+          TEST_EMAIL: ${{ github.event.pusher.email }}
+          TEST_USERNAME: ${{ github.event.pusher.username }}
+        run: |
+          echo $TEST_NAME
+          echo $TEST_EMAIL
+          echo $TEST_USERNAME
       - name: Install dependencies
         run: |
           sudo apt-get update
