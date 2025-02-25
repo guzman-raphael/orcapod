@@ -3,7 +3,10 @@ on:
   - push
 jobs:
   diagram:
-    if: github.repository_owner == 'guzman-raphael' && github.ref == 'refs/heads/dev'
+    if: >-
+      github.repository_owner == 'guzman-raphael' &&
+      github.ref == 'refs/heads/dev' &&
+      github.actor != 'github-actions'
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
@@ -34,7 +37,7 @@ jobs:
           git commit -m "Update crate diagram." || echo "Diagram unchanged, skipping commit."
           git push
   api:
-    if: github.repository_owner == 'guzman-raphael' && github.ref == 'refs/heads/dev' 
+    if: github.repository_owner == 'guzman-raphael' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       pages: write
