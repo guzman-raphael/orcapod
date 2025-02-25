@@ -6,7 +6,7 @@ jobs:
     if: >-
       github.repository_owner == 'guzman-raphael' &&
       github.ref == 'refs/heads/dev' &&
-      github.actor != 'github-actions'
+      github.event.pusher.name != 'github-actions'
     runs-on: ubuntu-latest
     steps:
       - name: Install dependencies
