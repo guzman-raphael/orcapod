@@ -246,6 +246,70 @@ impl LocalDockerOrchestrator {
             async_driver: Runtime::new()?,
         })
     }
+    fn prepare_mount_binds(
+        namespace_lookup: &HashMap<String, PathBuf>,
+        pod_job: &PodJob,
+    ) -> Result<(Vec<String>, [String; 1])> {
+        // all host mounted paths need to be absolute
+        let host_output_directory = path::absolute(
+            namespace_lookup[&pod_job.output_stream_path.location.namespace]
+                .join(&pod_job.output_stream_path.location.path),
+        )?;
+        // Ensure output directory exists to prevent permissions issues if daemon's owner is root
+        fs::create_dir_all(&host_output_directory)?;
+        let output_bind = [format!(
+            "{}:{}",
+            host_output_directory.to_string_lossy(),
+            pod_job.pod.output_dir.to_string_lossy(),
+        )];
+        let input_binds = pod_job
+            .pod
+            .input_stream_map
+            .iter()
+            .flat_map(
+                |(stream_name, stream_info)| match &pod_job.input_stream_path[stream_name] {
+                    Input::Unary(single_blob) => vec![single_blob]
+                        .into_iter()
+                        .map(|blob| {
+                            Ok(format!(
+                                "{}:{}:{}",
+                                path::absolute(
+                                    namespace_lookup[&blob.location.namespace]
+                                        .join(&blob.location.path)
+                                )?
+                                .to_string_lossy(),
+                                stream_info.path.to_string_lossy(),
+                                "ro"
+                            ))
+                        })
+                        .collect::<Vec<_>>(),
+                    Input::Collection(blobs) => blobs
+                        .iter()
+                        .map(|blob| {
+                            Ok(format!(
+                                "{}:{}:{}",
+                                path::absolute(
+                                    namespace_lookup[&blob.location.namespace]
+                                        .join(&blob.location.path)
+                                )?
+                                .to_string_lossy(),
+                                stream_info
+                                    .path
+                                    .join(blob.location.path.file_name().ok_or(OrcaError::from(
+                                        Kind::InvalidPath {
+                                            path: blob.location.path.clone()
+                                        }
+                                    ))?)
+                                    .to_string_lossy(),
+                                "ro"
+                            ))
+                        })
+                        .collect::<Vec<_>>(),
+                },
+            )
+            .collect::<Result<Vec<_>>>()?;
+        Ok((input_binds, output_bind))
+    }
     #[expect(
         clippy::cast_possible_wrap,
         clippy::cast_possible_truncation,
@@ -263,12 +327,6 @@ impl LocalDockerOrchestrator {
         Option<CreateContainerOptions<String>>,
         Config<String>,
     )> {
-        // Ensure output directory exists to prevent permissions issues if daemon's owner is root
-        let host_output_directory = path::absolute(
-            namespace_lookup[&pod_job.output_stream_path.location.namespace]
-                .join(&pod_job.output_stream_path.location.path),
-        )?;
-        fs::create_dir_all(&host_output_directory)?;
         // Prepare configuration
         let container_name = Generator::with_naming(Name::Plain)
             .next()
@@ -294,30 +352,7 @@ impl LocalDockerOrchestrator {
                 serde_json::to_string(&pod_job)?,
             ),
         ]);
-        let unary_input_binds = pod_job
-            .pod
-            .input_stream_map
-            .iter()
-            .map(
-                |(stream_name, stream_info)| match &pod_job.input_stream_path[stream_name] {
-                    Input::Unary(blob) => Ok(format!(
-                        "{}:{}:{}",
-                        path::absolute(
-                            namespace_lookup[&blob.location.namespace].join(&blob.location.path)
-                        )?
-                        .to_string_lossy(),
-                        stream_info.path.to_string_lossy(),
-                        "ro"
-                    )),
-                    Input::Collection(_) => todo!(),
-                },
-            )
-            .collect::<Result<Vec<_>>>()?;
-        let output_bind = [format!(
-            "{}:{}",
-            host_output_directory.to_string_lossy(),
-            pod_job.pod.output_dir.to_string_lossy(),
-        )];
+        let (input_binds, output_bind) = Self::prepare_mount_binds(namespace_lookup, pod_job)?;
         let command = pod_job
             .pod
             .command
@@ -344,7 +379,7 @@ impl LocalDockerOrchestrator {
                 host_config: Some(HostConfig {
                     nano_cpus: Some((pod_job.cpu_limit * 10_f32.powi(9)) as i64), // ncpu, ucores=3, mcores=6, cores=9
                     memory: Some(pod_job.memory_limit as i64),
-                    binds: Some([&*unary_input_binds, &output_bind].concat()),
+                    binds: Some([&*input_binds, &output_bind].concat()),
                     ..Default::default()
                 }),
                 labels: Some(labels),

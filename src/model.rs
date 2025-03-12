@@ -1,5 +1,5 @@
 use crate::{
-    crypto::{hash_buffer, hash_dir, hash_file},
+    crypto::{hash_blob, hash_buffer},
     error::Result,
     orchestrator::Status,
     util::get_type_name,
@@ -151,21 +151,19 @@ impl PodJob {
         let input_stream_path_with_checksums = input_stream_path
             .into_iter()
             .map(|(stream_name, stream_input)| match stream_input {
-                Input::Unary(blob) => {
-                    let blob_path =
-                        namespace_lookup[&blob.location.namespace].join(&blob.location.path);
-                    Ok((
-                        stream_name,
-                        Input::Unary(Blob {
-                            checksum: match blob.kind {
-                                FileOrFolder::File => Some(hash_file(blob_path)?),
-                                FileOrFolder::Folder => Some(hash_dir(blob_path)?),
-                            },
-                            ..blob
-                        }),
-                    ))
-                }
-                Input::Collection(_) => todo!(),
+                Input::Unary(blob) => Ok((
+                    stream_name,
+                    Input::Unary(hash_blob(namespace_lookup, blob)?),
+                )),
+                Input::Collection(blobs) => Ok((
+                    stream_name,
+                    Input::Collection(
+                        blobs
+                            .into_iter()
+                            .map(|blob| hash_blob(namespace_lookup, blob))
+                            .collect::<Result<Vec<_>>>()?,
+                    ),
+                )),
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
         let mut output_stream_path_without_checksum = output_stream_path;
@@ -293,7 +291,7 @@ pub enum GPUModel {
 /// data.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct StreamInfo {
-    /// Path to stream file.
+    /// Path to stream file or folder.
     pub path: PathBuf,
     /// Naming pattern for the stream.
     pub match_pattern: String,

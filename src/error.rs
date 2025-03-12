@@ -36,6 +36,8 @@ pub(crate) enum Kind {
     EmptyResponseWhenLoadingContainerAltImage { path: PathBuf },
     #[error("No tags found in provided container alternate image: {path}.")]
     NoTagFoundInContainerAltImage { path: PathBuf },
+    #[error("Path missing a file or directory name: {path}.")]
+    InvalidPath { path: PathBuf },
     #[error(transparent)]
     GlobPatternError(#[from] glob::PatternError),
     #[error(transparent)]

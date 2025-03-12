@@ -44,17 +44,17 @@ pub fn pod_style() -> Result<Pod> {
         "python /run.py".to_owned(),
         BTreeMap::from([
             (
-                "style".to_owned(),
+                "extra-style".to_owned(),
                 StreamInfo {
-                    path: PathBuf::from("/input/style.t7"),
+                    path: PathBuf::from("/extra_styles/style2.t7"),
                     match_pattern: r".*\.t7".to_owned(),
                 },
             ),
             (
-                "image".to_owned(),
+                "base-input".to_owned(),
                 StreamInfo {
-                    path: PathBuf::from("/input/image.jpeg"),
-                    match_pattern: r".*\.jpeg".to_owned(),
+                    path: PathBuf::from("/input"),
+                    match_pattern: "input/.*".to_owned(),
                 },
             ),
         ]),
@@ -83,7 +83,7 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
         pod_style()?,
         BTreeMap::from([
             (
-                "style".to_owned(),
+                "extra-style".to_owned(),
                 Input::Unary(Blob {
                     kind: FileOrFolder::File,
                     location: OrcaPath {
@@ -94,15 +94,25 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
                 }),
             ),
             (
-                "image".to_owned(),
-                Input::Unary(Blob {
-                    kind: FileOrFolder::File,
-                    location: OrcaPath {
-                        namespace: "default".to_owned(),
-                        path: PathBuf::from("images/dog.jpeg"),
+                "base-input".to_owned(),
+                Input::Collection(vec![
+                    Blob {
+                        kind: FileOrFolder::File,
+                        location: OrcaPath {
+                            namespace: "default".to_owned(),
+                            path: PathBuf::from("styles/style1.t7"),
+                        },
+                        checksum: None,
                     },
-                    checksum: None,
-                }),
+                    Blob {
+                        kind: FileOrFolder::File,
+                        location: OrcaPath {
+                            namespace: "default".to_owned(),
+                            path: PathBuf::from("images/subject.jpeg"),
+                        },
+                        checksum: None,
+                    },
+                ]),
             ),
         ]),
         Blob {
