@@ -1,6 +1,6 @@
 use crate::{
     error::Result,
-    model::{PodJob, PodResult, StoreMap},
+    model::{OrcaPath, PodJob, PodResult},
     util::get_type_name,
 };
 use serde::{Deserialize, Serialize};
@@ -10,9 +10,8 @@ pub enum ImageKind {
     /// A published compute environment image in a container registry. Argument formatted as
     /// `{server.com/}{name}:{tag}`. Server is optional e.g. (`alpine:latest`).
     Published(String),
-    /// A packaged compute environment of image+tag as a tarball. Argument is the relative path of
-    /// tarball in orchestrator data directory e.g. (`path/to/image.tar.gz`).
-    Tarball(PathBuf),
+    /// A packaged compute environment of image+tag as a tarball.
+    Tarball(OrcaPath),
 }
 /// Status of a particular compute run.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
@@ -78,16 +77,20 @@ pub trait Orchestrator {
     /// Will return `Err` if there is an issue starting the container.
     fn start_with_altimage_blocking(
         &self,
+        namespace_lookup: &HashMap<String, PathBuf>,
         pod_job: &PodJob,
         image: &ImageKind,
-        store_map: &StoreMap,
     ) -> Result<PodRun>;
     /// How to synchronously start containers. Assumes `PodJob` image is published.
     ///
     /// # Errors
     ///
     /// Will return `Err` if there is an issue starting the container.
-    fn start_blocking(&self, pod_job: &PodJob, store_map: &StoreMap) -> Result<PodRun>;
+    fn start_blocking(
+        &self,
+        namespace_lookup: &HashMap<String, PathBuf>,
+        pod_job: &PodJob,
+    ) -> Result<PodRun>;
     /// How to synchronously query containers.
     ///
     /// # Errors
@@ -119,9 +122,9 @@ pub trait Orchestrator {
     /// Will return `Err` if there is an issue starting the container.
     fn start_with_altimage(
         &self,
+        namespace_lookup: &HashMap<String, PathBuf>,
         pod_job: &PodJob,
         image: &ImageKind,
-        store_map: &StoreMap,
     ) -> impl Future<Output = Result<PodRun>> + Send;
     /// How to asynchronously start containers. Assumes `PodJob` image is published.
     ///
@@ -130,8 +133,8 @@ pub trait Orchestrator {
     /// Will return `Err` if there is an issue starting the container.
     fn start(
         &self,
+        namespace_lookup: &HashMap<String, PathBuf>,
         pod_job: &PodJob,
-        store_map: &StoreMap,
     ) -> impl Future<Output = Result<PodRun>> + Send;
     /// How to asynchronously query containers.
     ///

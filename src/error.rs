@@ -9,43 +9,15 @@ use std::{
     io, path,
     path::PathBuf,
     result,
-    string::FromUtf8Error,
 };
 use thiserror::Error;
-
-use crate::model::Annotation;
 /// Shorthand for a Result that returns an `OrcaError`.
 pub type Result<T> = result::Result<T, OrcaError>;
 /// Possible errors you may encounter.
 #[derive(Error, Debug)]
 pub(crate) enum Kind {
-    #[error("Received an empty response when attempting to load the alternate container image file: {path}.")]
-    EmptyResponseWhenLoadingContainerAltImage { path: PathBuf },
-    #[error("fail to extract file name for path; {}", path.to_string_lossy().bright_cyan())]
-    FailedToExtractFileName { path: PathBuf },
     #[error("File `{}` already exists.", path.to_string_lossy().bright_cyan())]
     FileExists { path: PathBuf },
-    #[error("Out of generated random names.")]
-    GeneratedNamesOverflow,
-    #[error("IO Error: {} for path: {}", error, path.to_string_lossy())]
-    IoErrorWithPath { error: io::Error, path: PathBuf },
-    #[error("Input file or folder at path {path} not found")]
-    InputFileOrFolderNotFound { path: PathBuf },
-    #[error("An invalid datetime was set for pod result for pod job (hash: {pod_job_hash}).")]
-    InvalidPodResultTerminatedDatetime { pod_job_hash: String },
-    #[error("Unable to find {} in pod_job's input_store_mapping", stream_name.bright_cyan())]
-    MissingStreamInPodJob { stream_name: String },
-    #[error("Multiple hash found for {} and {}", name, version)]
-    MultipleHashFound { name: String, version: String },
-    #[error(
-        "Multiple pod runs were found for pod job with annotation: {:?} and hash: {}: ",
-        annotation,
-        hash
-    )]
-    MultipleMatchingPodRunsFound {
-        annotation: Option<Annotation>,
-        hash: String,
-    },
     #[error("No annotation found for `{name}:{version}` {class}.")]
     NoAnnotationFound {
         class: String,
@@ -54,26 +26,26 @@ pub(crate) enum Kind {
     },
     #[error("No known container names.")]
     NoContainerNames,
+    #[error("Out of generated random names.")]
+    GeneratedNamesOverflow,
     #[error("No corresponding pod run found for pod job (hash: {pod_job_hash}).")]
     NoMatchingPodRun { pod_job_hash: String },
+    #[error("An invalid datetime was set for pod result for pod job (hash: {pod_job_hash}).")]
+    InvalidPodResultTerminatedDatetime { pod_job_hash: String },
+    #[error("Received an empty response when attempting to load the alternate container image file: {path}.")]
+    EmptyResponseWhenLoadingContainerAltImage { path: PathBuf },
     #[error("No tags found in provided container alternate image: {path}.")]
     NoTagFoundInContainerAltImage { path: PathBuf },
-    #[error("Store name {} not found", store_name.bright_cyan())]
-    StoreNameNotFound { store_name: String },
-
-    #[error(transparent)]
-    FromUtf8Error(#[from] FromUtf8Error),
     #[error(transparent)]
     GlobPatternError(#[from] glob::PatternError),
-    #[error(transparent)]
-    IoError(#[from] io::Error),
     #[error(transparent)]
     RegexError(#[from] regex::Error),
     #[error(transparent)]
     SerdeYamlError(#[from] serde_yaml::Error),
     #[error(transparent)]
     SerdeJsonError(#[from] serde_json::Error),
-
+    #[error(transparent)]
+    IoError(#[from] io::Error),
     #[error(transparent)]
     BollardError(#[from] BollardError),
     #[error(transparent)]
@@ -131,13 +103,6 @@ impl From<io::Error> for OrcaError {
     fn from(error: io::Error) -> Self {
         Self {
             kind: Kind::IoError(error),
-        }
-    }
-}
-impl From<FromUtf8Error> for OrcaError {
-    fn from(error: FromUtf8Error) -> Self {
-        Self {
-            kind: Kind::FromUtf8Error(error),
         }
     }
 }

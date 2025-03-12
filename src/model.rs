@@ -1,18 +1,17 @@
 use crate::{
     crypto::{hash_buffer, hash_dir, hash_file},
-    error::{Kind, OrcaError, Result},
+    error::Result,
     orchestrator::Status,
-    util::{get_type_name, hash},
+    util::get_type_name,
 };
 use heck::ToSnakeCase as _;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use serde_yaml;
 use std::{
     collections::{BTreeMap, HashMap},
-    path::{Path, PathBuf},
+    path::PathBuf,
     result,
 };
-
 /// Converts a model instance into a consistent yaml.
 ///
 /// # Errors
@@ -29,6 +28,7 @@ pub fn to_yaml<T: Serialize>(instance: &T) -> Result<String> {
 }
 
 // --- core model structs ---
+
 /// A reusable, containerized computational unit.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Default, Clone)]
 pub struct Pod {
@@ -121,29 +121,15 @@ pub struct PodJob {
     #[serde(serialize_with = "serialize_pod", deserialize_with = "deserialize_pod")]
     pub pod: Pod,
     /// Map stream ids to an input in user data target.
-    pub input_stream_map: BTreeMap<String, Input>,
+    pub input_stream_path: BTreeMap<String, Input>,
     /// Map output directory to a folder in user data target.
-    pub output_stream_map: Output,
+    pub output_stream_path: Blob<FolderOnly>,
     /// Maximum allowable cores in fractional cores for the computation.
     pub cpu_limit: f32,
     /// Maximum allowable memory in bytes for the computation.
     pub memory_limit: u64,
     /// Environment variables to be set in environment.
     pub env_vars: Option<HashMap<String, String>>,
-    /// Policy on how to handle retry
-    pub retry_policy: RetryPolicy,
-}
-
-/// An interface to access BLOB functions.
-pub trait BlobInterface {
-    /// How to evaluate a checksum of a BLOB.
-    ///
-    /// # Errors
-    ///
-    /// Will return `Err` if there is an issue computing the checksum of a BLOB.
-    fn compute_checksum(&self, blob: Blob) -> Result<Blob> {
-        Ok(blob)
-    }
 }
 
 impl PodJob {
@@ -155,27 +141,47 @@ impl PodJob {
     pub fn new(
         annotation: Option<Annotation>,
         pod: Pod,
-        input_stream_mapping: BTreeMap<String, Input>,
-        output_stream_map: Output,
+        input_stream_path: BTreeMap<String, Input>,
+        output_stream_path: Blob<FolderOnly>,
         cpu_limit: f32,
         memory_limit: u64,
         env_vars: Option<HashMap<String, String>>,
-        retry_policy: RetryPolicy,
+        namespace_lookup: &HashMap<String, PathBuf>,
     ) -> Result<Self> {
+        let input_stream_path_with_checksums = input_stream_path
+            .into_iter()
+            .map(|(stream_name, stream_input)| match stream_input {
+                Input::Unary(blob) => {
+                    let blob_path =
+                        namespace_lookup[&blob.location.namespace].join(&blob.location.path);
+                    Ok((
+                        stream_name,
+                        Input::Unary(Blob {
+                            checksum: match blob.kind {
+                                FileOrFolder::File => Some(hash_file(blob_path)?),
+                                FileOrFolder::Folder => Some(hash_dir(blob_path)?),
+                            },
+                            ..blob
+                        }),
+                    ))
+                }
+                Input::Collection(_) => todo!(),
+            })
+            .collect::<Result<BTreeMap<_, _>>>()?;
+        let mut output_stream_path_without_checksum = output_stream_path;
+        output_stream_path_without_checksum.checksum = None;
         let pod_job_no_hash = Self {
             annotation,
             hash: String::new(),
             pod,
-            input_stream_map: input_stream_mapping,
-            output_stream_map,
+            input_stream_path: input_stream_path_with_checksums,
+            output_stream_path: output_stream_path_without_checksum,
             cpu_limit,
             memory_limit,
             env_vars,
-            retry_policy,
         };
-
         Ok(Self {
-            hash: hash(to_yaml(&pod_job_no_hash)?),
+            hash: hash_buffer(to_yaml(&pod_job_no_hash)?),
             ..pod_job_no_hash
         })
     }
@@ -221,8 +227,6 @@ pub struct PodResult {
     pub created: u64,
     /// Time in epoch when terminated in seconds.
     pub terminated: u64,
-    /// Output logs of container
-    pub logs: String,
 }
 
 impl PodResult {
@@ -238,7 +242,6 @@ impl PodResult {
         status: Status,
         created: u64,
         terminated: u64,
-        logs: String,
     ) -> Result<Self> {
         let pod_result_no_hash = Self {
             annotation,
@@ -248,18 +251,18 @@ impl PodResult {
             status,
             created,
             terminated,
-            logs,
         };
         Ok(Self {
-            hash: hash(to_yaml(&pod_result_no_hash)?),
+            hash: hash_buffer(to_yaml(&pod_result_no_hash)?),
             ..pod_result_no_hash
         })
     }
 }
 
 // --- util types ---
+
 /// Standard metadata structure for all model instances.
-#[derive(Serialize, Deserialize, Default, Debug, PartialEq, Eq, Clone)]
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 pub struct Annotation {
     /// A unique name.
     pub name: String,
@@ -268,7 +271,6 @@ pub struct Annotation {
     /// A long form description.
     pub description: String,
 }
-
 /// Specification for GPU requirements in computation.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct GPURequirement {
@@ -279,7 +281,6 @@ pub struct GPURequirement {
     /// Number of GPU cards required.
     pub count: u16,
 }
-
 /// GPU model specification.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub enum GPUModel {
@@ -288,7 +289,6 @@ pub enum GPUModel {
     /// AMD-manufactured card where `String` is the specific model e.g. ???
     AMD(String),
 }
-
 /// Streams are named and represent an abstraction for the file(s) that represent some particular
 /// data.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -298,121 +298,46 @@ pub struct StreamInfo {
     /// Naming pattern for the stream.
     pub match_pattern: String,
 }
-
 /// Input options sourced from user data target.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Input {
     /// A single BLOB.
-    Unary(Blob),
+    Unary(Blob<FileOrFolder>),
     /// A series of BLOBs.
-    Collection(Vec<Blob>),
+    Collection(Vec<Blob<FileOrFolder>>),
+}
+/// Location of BLOB data.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct OrcaPath {
+    /// Namespace alias.
+    pub namespace: String,
+    /// Path within namespace.
+    pub path: PathBuf,
 }
 
 /// BLOB in user data target with metadata.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-pub struct Blob {
+pub struct Blob<T> {
     /// BLOB available options.
-    pub kind: PathType,
+    pub kind: T,
     /// BLOB location.
-    pub rel_path: PathBuf,
-    /// Name of store
-    pub store_name: String,
+    pub location: OrcaPath,
     /// BLOB contents checksum.
-    pub checksum: String,
+    pub checksum: Option<String>,
 }
-
-impl Blob {
-    /// # Errors
-    /// Will error out if unable to compute checksum on blob contents
-    pub fn new(
-        kind: PathType,
-        rel_path: impl AsRef<Path>,
-        store_name: String,
-        store_map: &StoreMap,
-    ) -> Result<Self> {
-        let blob = Self {
-            kind,
-            rel_path: rel_path.as_ref().to_path_buf(),
-            store_name,
-            checksum: String::new(),
-        };
-
-        Ok(Self {
-            checksum: match blob.kind {
-                PathType::File => hash_file(&blob.resolve_absolute_path(store_map)?)?,
-                PathType::Directory => hash_dir(&blob.resolve_absolute_path(store_map)?)?,
-            },
-            ..blob
-        })
-    }
-
-    /// Utility function where given a `store_map`, it will return the absolute path to the blob
-    ///
-    /// # Errors
-    /// Will failed if a given `store_name` was not found in the mapping
-    pub fn resolve_absolute_path(&self, store_map: &StoreMap) -> Result<PathBuf> {
-        Ok(store_map
-            .mapping
-            .get(&self.store_name)
-            .ok_or_else(|| {
-                OrcaError::from(Kind::StoreNameNotFound {
-                    store_name: self.store_name.clone(),
-                })
-            })?
-            .join(&self.rel_path))
-    }
-}
-
 /// File or folder options for BLOBs.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-pub enum PathType {
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub enum FileOrFolder {
     /// A single file specified by its absolute path.
     File,
     /// A single folder specified by its absolute path.
-    #[default]
-    Directory,
+    Folder,
 }
-
-/// Struct to handle `pod_job` output
+/// Folder-only option for BLOBs.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-pub struct Output {
-    /// DIR location.
-    pub rel_path: PathBuf,
-    /// Name of store
-    pub store_name: String,
-}
-
-impl Output {
-    /// Utility function where given a `store_map`, it will return the absolute path to the blob
-    ///
-    /// # Errors
-    /// Will failed if a given `store_name` was not found in the mapping
-    pub fn resolve_absolute_path(&self, store_map: &StoreMap) -> Result<PathBuf> {
-        Ok(store_map
-            .mapping
-            .get(&self.store_name)
-            .ok_or_else(|| {
-                OrcaError::from(Kind::StoreNameNotFound {
-                    store_name: self.store_name.clone(),
-                })
-            })?
-            .join(&self.rel_path))
-    }
-}
-
-/// Pod job retry policy
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Default)]
-pub enum RetryPolicy {
-    /// Will stop the job upon first failure
+pub enum FolderOnly {
+    /// A single folder specified by its absolute path.
     #[default]
-    NoRetry,
-    /// Will allow n number of failures within a time window of t seconds
-    RetryTimeWindow(u16, u64), // Where u16 is num of retries and u64 is time in seconds
-}
-
-/// Same as blob interface, but renamed due to possible additional of features for store pointer.
-pub struct StoreMap {
-    /// Map `store_name` to a Store
-    pub mapping: BTreeMap<String, PathBuf>,
+    Folder,
 }

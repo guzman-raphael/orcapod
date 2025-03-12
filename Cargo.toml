@@ -61,7 +61,7 @@ restriction = "deny"
 style = "deny"
 suspicious = "deny"
 
-arbitrary_source_item_ordering = { level = "allow", priority = 127 } # allow arbitrary ordering to keep relevant code nearby
+arbitrary_source_item_ordering = { level = "allow", priority = 127 }   # allow arbitrary ordering to keep relevant code nearby
 arithmetic_side_effects = { level = "allow", priority = 127 }          # allow arithmetic for convenience though it could overflow
 as_conversions = { level = "allow", priority = 127 }                   # allow casting
 assertions_on_result_states = { level = "allow", priority = 127 }      # allow checking is_ok/is_err
@@ -86,7 +86,6 @@ missing_inline_in_public_items = { level = "allow", priority = 127 }   # let rus
 missing_trait_methods = { level = "allow", priority = 127 }            # allow in favor of rustc `implement the missing item`
 must_use_candidate = { level = "allow", priority = 127 }               # omitting #[must_use] ok
 mod_module_files = { level = "allow", priority = 127 }                 # mod directories ok
-module_name_repetitions = { level = "allow", priority = 127 }          # name should be explicit to avoid confusion
 non_ascii_literal = { level = "allow", priority = 127 }                # non-ascii char in string literal ok
 partial_pub_fields = { level = "allow", priority = 127 }               # partial struct pub fields ok
 pattern_type_mismatch = { level = "allow", priority = 127 }            # allow in favor of clippy::ref_patterns

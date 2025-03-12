@@ -7,23 +7,24 @@
 
 pub mod fixture;
 use fixture::{
-    add_storage, container_image_style, pod_job_style, store_fixture, store_map_fixture, TestStore,
-    TestStoredModel,
+    add_storage, container_image_style, pod_job_style, store_test, TestStore, TestStoredModel,
 };
 use orcapod::{
     error::Result,
-    model::{PodJob, StoreMap},
+    model::{OrcaPath, PodJob},
     orchestrator::{docker::LocalDockerOrchestrator, ImageKind, Orchestrator as _, PodRun, Status},
 };
-use std::collections::{BTreeMap, HashMap};
-use tempfile::TempDir;
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+};
 
 fn setup<'store>(
     store: &'store TestStore,
-    store_map: &StoreMap,
+    namespace_lookup: &HashMap<String, PathBuf>,
 ) -> Result<(TestStoredModel<'store, PodJob>, LocalDockerOrchestrator)> {
     Ok((
-        add_storage(pod_job_style(store_map)?, store)?,
+        add_storage(pod_job_style(namespace_lookup)?, store)?,
         LocalDockerOrchestrator::new()?,
     ))
 }
@@ -47,12 +48,12 @@ fn basic_test(
         vec![expected_command.clone()],
         "Unexpected list."
     );
+    // await result
     let pod_result_1 = orchestrator.get_result_blocking(pod_run)?;
     assert_eq!(
         orchestrator.get_info_blocking(pod_run)?.status,
         Status::Completed,
-        "Pod error out with {}",
-        pod_result_1.logs
+        "Unexpected state."
     );
     assert_eq!(
         orchestrator
@@ -76,7 +77,7 @@ fn basic_test(
         orchestrator.list_blocking()?.is_empty(),
         "Unexpected container remains."
     );
-
+    // try getting info of a purged pod run
     assert!(
         orchestrator
             .get_info_blocking(pod_run)
@@ -89,25 +90,24 @@ fn basic_test(
 
 #[test]
 fn offline_container_image_basic() -> Result<()> {
-    let store = store_fixture(None)?;
-    let store_map = store_map_fixture()?;
-    let (mut stored_pod_job, orchestrator) = setup(&store, &store_map)?;
-
-    // Create temp dir to store image
-    let temp_dir = TempDir::new()?;
-
-    let container_image_path = temp_dir
-        .path()
-        .join("container_images/style-transfer/image.tar.gz");
-
-    let _container_image = container_image_style(&container_image_path)?;
+    let store = store_test(None, true)?;
+    let (mut stored_pod_job, orchestrator) = setup(&store, &store.namespace_lookup_read_write)?;
+    let container_image_relative_location =
+        "container_images/style-transfer/image.tar.gz".to_owned();
+    let _container_image = container_image_style(
+        store.namespace_lookup_read_write["default"]
+            .join(container_image_relative_location.clone()),
+    )?;
 
     stored_pod_job.model.env_vars = Some(HashMap::from([("DELAY".to_owned(), "5".to_owned())]));
-    let container_image_kind = ImageKind::Tarball(container_image_path);
+    let container_image_kind = ImageKind::Tarball(OrcaPath {
+        namespace: "default".to_owned(),
+        path: PathBuf::from(container_image_relative_location),
+    });
     let pod_run = orchestrator.start_with_altimage_blocking(
+        &store.namespace_lookup_read_write,
         &stored_pod_job.model,
         &container_image_kind,
-        &store_map,
     )?;
     basic_test(
         &orchestrator,
@@ -118,15 +118,15 @@ fn offline_container_image_basic() -> Result<()> {
 
 #[test]
 fn remote_container_image_basic() -> Result<()> {
-    let store = store_fixture(None)?;
-    let store_map = store_map_fixture()?;
-    let (mut stored_pod_job, orchestrator) = setup(&store, &store_map)?;
+    let store = store_test(None, true)?;
+    let (mut stored_pod_job, orchestrator) = setup(&store, &store.namespace_lookup_read_write)?;
 
     stored_pod_job.model.pod.image = "alpine:3.14".to_owned();
     stored_pod_job.model.pod.command = "sleep 5".to_owned();
     stored_pod_job.model.pod.input_stream_map = BTreeMap::new();
-    stored_pod_job.model.input_stream_map = BTreeMap::new();
-    let pod_run = orchestrator.start_blocking(&stored_pod_job.model, &store_map)?;
+    stored_pod_job.model.input_stream_path = BTreeMap::new();
+    let pod_run =
+        orchestrator.start_blocking(&store.namespace_lookup_read_write, &stored_pod_job.model)?;
     basic_test(
         &orchestrator,
         &pod_run,
