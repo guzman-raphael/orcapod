@@ -42,11 +42,11 @@ pub struct Pod {
     pub image: String,
     /// Space-delimited shell command to begin computation.
     pub command: String,
-    /// A dictionary of named input streams.
-    pub input_stream_map: BTreeMap<String, StreamInfo>,
-    /// Absolute output directory within the environment.
+    /// Exposed, internal input streams.
+    pub input_stream: BTreeMap<String, StreamInfo>,
+    /// Exposed, internal output directory.
     pub output_dir: PathBuf,
-    output_stream_map: BTreeMap<String, StreamInfo>,
+    output_stream: BTreeMap<String, StreamInfo>,
     source_commit_url: String,
     recommended_cpus: f32,
     recommended_memory: u64,
@@ -63,9 +63,9 @@ impl Pod {
         annotation: Option<Annotation>,
         image: String,
         command: String,
-        input_stream_map: BTreeMap<String, StreamInfo>,
+        input_stream: BTreeMap<String, StreamInfo>,
         output_dir: PathBuf,
-        output_stream_map: BTreeMap<String, StreamInfo>,
+        output_stream: BTreeMap<String, StreamInfo>,
         source_commit_url: String,
         recommended_cpus: f32,
         recommended_memory: u64,
@@ -76,9 +76,9 @@ impl Pod {
             hash: String::new(),
             image,
             command,
-            input_stream_map,
+            input_stream,
             output_dir,
-            output_stream_map,
+            output_stream,
             source_commit_url,
             recommended_cpus,
             recommended_memory,
@@ -120,10 +120,10 @@ pub struct PodJob {
     /// A pod to base the pod job on.
     #[serde(serialize_with = "serialize_pod", deserialize_with = "deserialize_pod")]
     pub pod: Pod,
-    /// Map stream ids to an input in user data target.
-    pub input_stream_path: BTreeMap<String, Input>,
-    /// Map output directory to a folder in user data target.
-    pub output_stream_path: Blob<FolderOnly>,
+    /// Attached, external input streams.
+    pub input_stream: BTreeMap<String, Input>,
+    /// Attached, external output directory.
+    pub output_dir: OrcaPath,
     /// Maximum allowable cores in fractional cores for the computation.
     pub cpu_limit: f32,
     /// Maximum allowable memory in bytes for the computation.
@@ -141,14 +141,14 @@ impl PodJob {
     pub fn new(
         annotation: Option<Annotation>,
         pod: Pod,
-        input_stream_path: BTreeMap<String, Input>,
-        output_stream_path: Blob<FolderOnly>,
+        input_stream: BTreeMap<String, Input>,
+        output_dir: OrcaPath,
         cpu_limit: f32,
         memory_limit: u64,
         env_vars: Option<HashMap<String, String>>,
         namespace_lookup: &HashMap<String, PathBuf>,
     ) -> Result<Self> {
-        let input_stream_path_with_checksums = input_stream_path
+        let input_stream_with_checksums = input_stream
             .into_iter()
             .map(|(stream_name, stream_input)| match stream_input {
                 Input::Unary(blob) => Ok((
@@ -166,14 +166,12 @@ impl PodJob {
                 )),
             })
             .collect::<Result<BTreeMap<_, _>>>()?;
-        let mut output_stream_path_without_checksum = output_stream_path;
-        output_stream_path_without_checksum.checksum = None;
         let pod_job_no_hash = Self {
             annotation,
             hash: String::new(),
             pod,
-            input_stream_path: input_stream_path_with_checksums,
-            output_stream_path: output_stream_path_without_checksum,
+            input_stream: input_stream_with_checksums,
+            output_dir,
             cpu_limit,
             memory_limit,
             env_vars,
@@ -296,14 +294,14 @@ pub struct StreamInfo {
     /// Naming pattern for the stream.
     pub match_pattern: String,
 }
-/// Input options sourced from user data target.
+/// Input options.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(untagged)]
 pub enum Input {
     /// A single BLOB.
-    Unary(Blob<FileOrFolder>),
+    Unary(Blob),
     /// A series of BLOBs.
-    Collection(Vec<Blob<FileOrFolder>>),
+    Collection(Vec<Blob>),
 }
 /// Location of BLOB data.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -314,28 +312,22 @@ pub struct OrcaPath {
     pub path: PathBuf,
 }
 
-/// BLOB in user data target with metadata.
+/// BLOB with metadata.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-pub struct Blob<T> {
+pub struct Blob {
     /// BLOB available options.
-    pub kind: T,
+    pub kind: BlobKind,
     /// BLOB location.
     pub location: OrcaPath,
     /// BLOB contents checksum.
-    pub checksum: Option<String>,
+    pub checksum: String,
 }
 /// File or folder options for BLOBs.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub enum FileOrFolder {
-    /// A single file specified by its absolute path.
-    File,
-    /// A single folder specified by its absolute path.
-    Folder,
-}
-/// Folder-only option for BLOBs.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
-pub enum FolderOnly {
-    /// A single folder specified by its absolute path.
+pub enum BlobKind {
+    /// A single file.
     #[default]
+    File,
+    /// A single folder.
     Folder,
 }

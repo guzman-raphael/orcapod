@@ -252,8 +252,7 @@ impl LocalDockerOrchestrator {
     ) -> Result<(Vec<String>, [String; 1])> {
         // all host mounted paths need to be absolute
         let host_output_directory = path::absolute(
-            namespace_lookup[&pod_job.output_stream_path.location.namespace]
-                .join(&pod_job.output_stream_path.location.path),
+            namespace_lookup[&pod_job.output_dir.namespace].join(&pod_job.output_dir.path),
         )?;
         // Ensure output directory exists to prevent permissions issues if daemon's owner is root
         fs::create_dir_all(&host_output_directory)?;
@@ -264,10 +263,10 @@ impl LocalDockerOrchestrator {
         )];
         let input_binds = pod_job
             .pod
-            .input_stream_map
+            .input_stream
             .iter()
             .flat_map(
-                |(stream_name, stream_info)| match &pod_job.input_stream_path[stream_name] {
+                |(stream_name, stream_info)| match &pod_job.input_stream[stream_name] {
                     Input::Unary(single_blob) => vec![single_blob]
                         .into_iter()
                         .map(|blob| {

@@ -1,6 +1,6 @@
 use crate::{
     error::Result,
-    model::{Blob, FileOrFolder},
+    model::{Blob, BlobKind},
 };
 use serde_yaml;
 use sha2::{Digest as _, Sha256};
@@ -76,13 +76,13 @@ pub fn hash_dir(dirpath: impl AsRef<Path>) -> Result<String> {
 /// Will return error if hashing fails on file or folder.
 pub fn hash_blob(
     namespace_lookup: &HashMap<String, PathBuf, RandomState>,
-    blob: Blob<FileOrFolder>,
-) -> Result<Blob<FileOrFolder>> {
+    blob: Blob,
+) -> Result<Blob> {
     let blob_path = namespace_lookup[&blob.location.namespace].join(&blob.location.path);
     Ok(Blob {
         checksum: match blob.kind {
-            FileOrFolder::File => Some(hash_file(blob_path)?),
-            FileOrFolder::Folder => Some(hash_dir(blob_path)?),
+            BlobKind::File => hash_file(blob_path)?,
+            BlobKind::Folder => hash_dir(blob_path)?,
         },
         ..blob
     })

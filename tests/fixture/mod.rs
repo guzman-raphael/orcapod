@@ -10,10 +10,7 @@
 use names::{Generator, Name};
 use orcapod::{
     error::Result,
-    model::{
-        Annotation, Blob, FileOrFolder, FolderOnly, Input, OrcaPath, Pod, PodJob, PodResult,
-        StreamInfo,
-    },
+    model::{Annotation, Blob, BlobKind, Input, OrcaPath, Pod, PodJob, PodResult, StreamInfo},
     orchestrator::Status,
     store::{filestore::LocalFileStore, ModelID, ModelInfo, Store as _},
 };
@@ -85,43 +82,39 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
             (
                 "extra-style".to_owned(),
                 Input::Unary(Blob {
-                    kind: FileOrFolder::File,
+                    kind: BlobKind::File,
                     location: OrcaPath {
                         namespace: "default".to_owned(),
                         path: PathBuf::from("styles/mosaic.t7"),
                     },
-                    checksum: None,
+                    checksum: String::new(),
                 }),
             ),
             (
                 "base-input".to_owned(),
                 Input::Collection(vec![
                     Blob {
-                        kind: FileOrFolder::File,
+                        kind: BlobKind::File,
                         location: OrcaPath {
                             namespace: "default".to_owned(),
                             path: PathBuf::from("styles/style1.t7"),
                         },
-                        checksum: None,
+                        checksum: String::new(),
                     },
                     Blob {
-                        kind: FileOrFolder::File,
+                        kind: BlobKind::File,
                         location: OrcaPath {
                             namespace: "default".to_owned(),
                             path: PathBuf::from("images/subject.jpeg"),
                         },
-                        checksum: None,
+                        checksum: String::new(),
                     },
                 ]),
             ),
         ]),
-        Blob {
-            kind: FolderOnly::Folder,
-            location: OrcaPath {
-                namespace: "default".to_owned(),
-                path: PathBuf::from("output"),
-            },
-            checksum: Some("please_ignore".to_owned()),
+        OrcaPath {
+            namespace: "default".to_owned(),
+            path: PathBuf::from("output"),
         },
         0.5,         // 500 millicores as frac cores
         2_u64 << 30, // 2GiB in bytes, KiB=<<10, MiB=<<20, GiB=<<30
