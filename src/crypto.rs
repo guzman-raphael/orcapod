@@ -16,6 +16,10 @@ use std::{
 /// # Errors
 ///
 /// Will return error if unable to read from stream.
+#[expect(
+    clippy::indexing_slicing,
+    reason = "Reading less than 0 is impossible."
+)]
 pub fn hash_stream(stream: &mut impl Read) -> Result<String> {
     const BUFFER_SIZE: usize = 8 << 10; // 8KB chunks to match with page size typically found
     let mut hash = Sha256::new();

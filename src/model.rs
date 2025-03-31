@@ -27,6 +27,31 @@ pub fn to_yaml<T: Serialize>(instance: &T) -> Result<String> {
     Ok(yaml)
 }
 
+fn serialize_hashmap<S, K: Ord + Serialize, V: Serialize>(
+    map: &HashMap<K, V>,
+    serializer: S,
+) -> result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let sorted = map.iter().collect::<BTreeMap<_, _>>();
+    sorted.serialize(serializer)
+}
+
+#[expect(clippy::ref_option, reason = "Serde requires this signature.")]
+fn serialize_hashmap_option<S, K: Ord + Serialize, V: Serialize>(
+    map_option: &Option<HashMap<K, V>>,
+    serializer: S,
+) -> result::Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let sorted = map_option
+        .as_ref()
+        .map(|map| map.iter().collect::<BTreeMap<_, _>>());
+    sorted.serialize(serializer)
+}
+
 // --- core model structs ---
 
 /// A reusable, containerized computational unit.
@@ -43,10 +68,12 @@ pub struct Pod {
     /// Space-delimited shell command to begin computation.
     pub command: String,
     /// Exposed, internal input streams.
-    pub input_stream: BTreeMap<String, StreamInfo>,
+    #[serde(serialize_with = "serialize_hashmap")]
+    pub input_stream: HashMap<String, StreamInfo>,
     /// Exposed, internal output directory.
     pub output_dir: PathBuf,
-    output_stream: BTreeMap<String, StreamInfo>,
+    #[serde(serialize_with = "serialize_hashmap")]
+    output_stream: HashMap<String, StreamInfo>,
     source_commit_url: String,
     recommended_cpus: f32,
     recommended_memory: u64,
@@ -63,9 +90,9 @@ impl Pod {
         annotation: Option<Annotation>,
         image: String,
         command: String,
-        input_stream: BTreeMap<String, StreamInfo>,
+        input_stream: HashMap<String, StreamInfo>,
         output_dir: PathBuf,
-        output_stream: BTreeMap<String, StreamInfo>,
+        output_stream: HashMap<String, StreamInfo>,
         source_commit_url: String,
         recommended_cpus: f32,
         recommended_memory: u64,
@@ -121,7 +148,8 @@ pub struct PodJob {
     #[serde(serialize_with = "serialize_pod", deserialize_with = "deserialize_pod")]
     pub pod: Pod,
     /// Attached, external input streams.
-    pub input_stream: BTreeMap<String, Input>,
+    #[serde(serialize_with = "serialize_hashmap")]
+    pub input_stream: HashMap<String, Input>,
     /// Attached, external output directory.
     pub output_dir: OrcaPath,
     /// Maximum allowable cores in fractional cores for the computation.
@@ -129,6 +157,7 @@ pub struct PodJob {
     /// Maximum allowable memory in bytes for the computation.
     pub memory_limit: u64,
     /// Environment variables to be set in environment.
+    #[serde(serialize_with = "serialize_hashmap_option")]
     pub env_vars: Option<HashMap<String, String>>,
 }
 
@@ -141,14 +170,14 @@ impl PodJob {
     pub fn new(
         annotation: Option<Annotation>,
         pod: Pod,
-        input_stream: BTreeMap<String, Input>,
+        mut input_stream: HashMap<String, Input>,
         output_dir: OrcaPath,
         cpu_limit: f32,
         memory_limit: u64,
         env_vars: Option<HashMap<String, String>>,
         namespace_lookup: &HashMap<String, PathBuf>,
     ) -> Result<Self> {
-        let input_stream_with_checksums = input_stream
+        input_stream = input_stream
             .into_iter()
             .map(|(stream_name, stream_input)| match stream_input {
                 Input::Unary(blob) => Ok((
@@ -165,12 +194,12 @@ impl PodJob {
                     ),
                 )),
             })
-            .collect::<Result<BTreeMap<_, _>>>()?;
+            .collect::<Result<_>>()?;
         let pod_job_no_hash = Self {
             annotation,
             hash: String::new(),
             pod,
-            input_stream: input_stream_with_checksums,
+            input_stream,
             output_dir,
             cpu_limit,
             memory_limit,

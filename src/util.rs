@@ -1,4 +1,5 @@
-use std::any::type_name;
+use crate::error::{Kind, Result};
+use std::{any::type_name, collections::HashMap};
 
 #[expect(
     clippy::unwrap_used,
@@ -10,4 +11,10 @@ pub fn get_type_name<T>() -> String {
         .map(str::to_owned)
         .last()
         .unwrap()
+}
+
+pub fn get<'map, T>(map: &'map HashMap<String, T>, key: &str) -> Result<&'map T> {
+    Ok(map.get(key).ok_or(Kind::KeyMissing {
+        key: key.to_owned(),
+    })?)
 }

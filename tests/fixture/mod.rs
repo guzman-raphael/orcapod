@@ -4,6 +4,7 @@
     missing_docs,
     clippy::missing_panics_doc,
     clippy::unwrap_in_result,
+    clippy::indexing_slicing,
     reason = "OK in tests."
 )]
 
@@ -15,7 +16,7 @@ use orcapod::{
     store::{filestore::LocalFileStore, ModelID, ModelInfo, Store as _},
 };
 use std::{
-    collections::{BTreeMap, HashMap},
+    collections::HashMap,
     fs::{self, File},
     hash::RandomState,
     ops::Deref,
@@ -39,7 +40,7 @@ pub fn pod_style() -> Result<Pod> {
         }),
         "example.server.com/user/style-transfer:1.0.0".to_owned(),
         "python /run.py".to_owned(),
-        BTreeMap::from([
+        HashMap::from([
             (
                 "extra-style".to_owned(),
                 StreamInfo {
@@ -56,7 +57,7 @@ pub fn pod_style() -> Result<Pod> {
             ),
         ]),
         PathBuf::from("/output"),
-        BTreeMap::from([(
+        HashMap::from([(
             "result".to_owned(),
             StreamInfo {
                 path: PathBuf::from("./result.jpeg"),
@@ -78,7 +79,7 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
             version: "0.1.0".to_owned(),
         }),
         pod_style()?,
-        BTreeMap::from([
+        HashMap::from([
             (
                 "extra-style".to_owned(),
                 Input::Unary(Blob {
@@ -118,7 +119,10 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
         },
         0.5,         // 500 millicores as frac cores
         2_u64 << 30, // 2GiB in bytes, KiB=<<10, MiB=<<20, GiB=<<30
-        None,
+        Some(HashMap::from([
+            ("ZZZ".to_owned(), "PLEASE".to_owned()),
+            ("AAA".to_owned(), "SORT".to_owned()),
+        ])),
         namespace_lookup,
     )
 }
@@ -185,10 +189,10 @@ pub fn container_image_style(binary_location: impl AsRef<Path>) -> Result<TestCo
     })
 }
 
-pub fn store_test(store_directory: Option<&str>, with_default_data: bool) -> Result<TestStore> {
-    let tmp_directory = String::from(tempdir()?.path().to_string_lossy());
+pub fn store_temp(store_directory: Option<&str>, with_default_data: bool) -> Result<TestStore> {
+    let temp_directory = String::from(tempdir()?.path().to_string_lossy());
     let store =
-        store_directory.map_or_else(|| LocalFileStore::new(tmp_directory), LocalFileStore::new);
+        store_directory.map_or_else(|| LocalFileStore::new(temp_directory), LocalFileStore::new);
     fs::create_dir_all(store.get_directory())?;
     let namespace_lookup: HashMap<String, PathBuf>;
     if with_default_data {

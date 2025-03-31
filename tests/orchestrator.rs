@@ -2,22 +2,20 @@
     clippy::expect_used,
     missing_docs,
     clippy::panic_in_result_fn,
+    clippy::indexing_slicing,
     reason = "OK in tests."
 )]
 
 pub mod fixture;
 use fixture::{
-    add_storage, container_image_style, pod_job_style, store_test, TestStore, TestStoredModel,
+    add_storage, container_image_style, pod_job_style, store_temp, TestStore, TestStoredModel,
 };
 use orcapod::{
     error::Result,
     model::{OrcaPath, PodJob},
     orchestrator::{docker::LocalDockerOrchestrator, ImageKind, Orchestrator as _, PodRun, Status},
 };
-use std::{
-    collections::{BTreeMap, HashMap},
-    path::PathBuf,
-};
+use std::{collections::HashMap, path::PathBuf};
 
 fn setup<'store>(
     store: &'store TestStore,
@@ -90,7 +88,7 @@ fn basic_test(
 
 #[test]
 fn offline_container_image_basic() -> Result<()> {
-    let store = store_test(None, true)?;
+    let store = store_temp(None, true)?;
     let (mut stored_pod_job, orchestrator) = setup(&store, &store.namespace_lookup_read_write)?;
     let container_image_relative_location =
         "container_images/style-transfer/image.tar.gz".to_owned();
@@ -118,13 +116,13 @@ fn offline_container_image_basic() -> Result<()> {
 
 #[test]
 fn remote_container_image_basic() -> Result<()> {
-    let store = store_test(None, true)?;
+    let store = store_temp(None, true)?;
     let (mut stored_pod_job, orchestrator) = setup(&store, &store.namespace_lookup_read_write)?;
 
     stored_pod_job.model.pod.image = "alpine:3.14".to_owned();
     stored_pod_job.model.pod.command = "sleep 5".to_owned();
-    stored_pod_job.model.pod.input_stream = BTreeMap::new();
-    stored_pod_job.model.input_stream = BTreeMap::new();
+    stored_pod_job.model.pod.input_stream = HashMap::new();
+    stored_pod_job.model.input_stream = HashMap::new();
     let pod_run =
         orchestrator.start_blocking(&store.namespace_lookup_read_write, &stored_pod_job.model)?;
     basic_test(

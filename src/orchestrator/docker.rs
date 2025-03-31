@@ -2,6 +2,7 @@ use crate::{
     error::{Kind, OrcaError, Result},
     model::{Input, Pod, PodJob, PodResult},
     orchestrator::{ImageKind, Orchestrator, PodRun, RunInfo, Status},
+    util::get,
 };
 use bollard::{
     container::{
@@ -154,17 +155,18 @@ impl Orchestrator for LocalDockerOrchestrator {
         )]))
         .await?
         .map(|(assigned_name, run_info)| {
-            let mut pod: Pod = serde_json::from_str(&run_info.labels["org.orcapod.pod"])?;
-            pod.annotation = serde_json::from_str(&run_info.labels["org.orcapod.pod.annotation"])?;
+            let mut pod: Pod = serde_json::from_str(get(&run_info.labels, "org.orcapod.pod")?)?;
+            pod.annotation =
+                serde_json::from_str(get(&run_info.labels, "org.orcapod.pod.annotation")?)?;
             pod.hash
-                .clone_from(&run_info.labels["org.orcapod.pod.hash"]);
+                .clone_from(get(&run_info.labels, "org.orcapod.pod.hash")?);
             let mut pod_job: PodJob =
-                serde_json::from_str(&run_info.labels["org.orcapod.pod_job"])?;
+                serde_json::from_str(get(&run_info.labels, "org.orcapod.pod_job")?)?;
             pod_job.annotation =
-                serde_json::from_str(&run_info.labels["org.orcapod.pod_job.annotation"])?;
+                serde_json::from_str(get(&run_info.labels, "org.orcapod.pod_job.annotation")?)?;
             pod_job
                 .hash
-                .clone_from(&run_info.labels["org.orcapod.pod_job.hash"]);
+                .clone_from(get(&run_info.labels, "org.orcapod.pod_job.hash")?);
             pod_job.pod = pod;
             Ok(PodRun::new::<Self>(&pod_job, assigned_name))
         })
@@ -265,12 +267,12 @@ impl LocalDockerOrchestrator {
             .pod
             .input_stream
             .iter()
-            .flat_map(
-                |(stream_name, stream_info)| match &pod_job.input_stream[stream_name] {
-                    Input::Unary(single_blob) => vec![single_blob]
-                        .into_iter()
-                        .map(|blob| {
-                            Ok(format!(
+            .try_fold::<_, _, Result<_>>(
+                vec![],
+                |mut flattened_binds, (stream_name, stream_info)| {
+                    flattened_binds.extend(match get(&pod_job.input_stream, stream_name)? {
+                        Input::Unary(blob) => {
+                            vec![format!(
                                 "{}:{}:{}",
                                 path::absolute(
                                     namespace_lookup[&blob.location.namespace]
@@ -279,42 +281,44 @@ impl LocalDockerOrchestrator {
                                 .to_string_lossy(),
                                 stream_info.path.to_string_lossy(),
                                 "ro"
-                            ))
-                        })
-                        .collect::<Vec<_>>(),
-                    Input::Collection(blobs) => blobs
-                        .iter()
-                        .map(|blob| {
-                            Ok(format!(
-                                "{}:{}:{}",
-                                path::absolute(
-                                    namespace_lookup[&blob.location.namespace]
-                                        .join(&blob.location.path)
-                                )?
-                                .to_string_lossy(),
-                                stream_info
-                                    .path
-                                    .join(blob.location.path.file_name().ok_or(OrcaError::from(
-                                        Kind::InvalidPath {
-                                            path: blob.location.path.clone()
-                                        }
-                                    ))?)
+                            )]
+                        }
+                        Input::Collection(blobs) => blobs
+                            .iter()
+                            .map(|blob| {
+                                Ok(format!(
+                                    "{}:{}:{}",
+                                    path::absolute(
+                                        namespace_lookup[&blob.location.namespace]
+                                            .join(&blob.location.path)
+                                    )?
                                     .to_string_lossy(),
-                                "ro"
-                            ))
-                        })
-                        .collect::<Vec<_>>(),
+                                    stream_info
+                                        .path
+                                        .join(blob.location.path.file_name().ok_or(
+                                            Kind::InvalidPath {
+                                                path: blob.location.path.clone(),
+                                            }
+                                        )?)
+                                        .to_string_lossy(),
+                                    "ro"
+                                ))
+                            })
+                            .collect::<Result<_>>()?,
+                    });
+                    Ok(flattened_binds)
                 },
-            )
-            .collect::<Result<Vec<_>>>()?;
+            )?;
         Ok((input_binds, output_bind))
     }
     #[expect(
         clippy::cast_possible_wrap,
         clippy::cast_possible_truncation,
+        clippy::indexing_slicing,
         reason = r#"
         - No issue in memory casting if between 0 - 2^63(i64:MAX, 8EB)
         - No issue in cores casting if in increments of 1e-9(nanocore)
+        - Pod commands will always have at least 1 element
         "#
     )]
     fn prepare_container_start_inputs(
@@ -391,11 +395,13 @@ impl LocalDockerOrchestrator {
         clippy::string_slice,
         clippy::cast_precision_loss,
         clippy::cast_possible_truncation,
+        clippy::indexing_slicing,
         reason = r#"
         - Timestamp and memory should always have a value > 0
         - Container will always have a name with more than 1 character
         - No issue in core casting if between 0 - 3.40e38(f32:MAX)
         - No issue in exit code casting if between -3.27e4(i16:MIN) - 3.27e4(i16:MAX)
+        - Containers will always have at least 1 name with at least 2 characters
         "#
     )]
     async fn list_containers(

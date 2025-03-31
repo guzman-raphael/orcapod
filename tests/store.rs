@@ -7,12 +7,13 @@
 
 pub mod fixture;
 use fixture::{
-    add_storage, pod_job_style, pod_result_style, pod_style, store_test, TestSetup, TestStore,
+    add_storage, pod_job_style, pod_result_style, pod_style, store_temp, TestSetup, TestStore,
     NAMESPACE_LOOKUP_READ_ONLY,
 };
 use orcapod::{
+    crypto::hash_buffer,
     error::Result,
-    model::{Annotation, Pod},
+    model::{to_yaml, Annotation, Pod},
     store::{filestore::LocalFileStore, ModelID, ModelInfo, Store as _},
 };
 use std::{fmt::Debug, fs, path::Path};
@@ -60,7 +61,7 @@ where
 
 #[test]
 fn pod_basic() -> Result<()> {
-    let store = store_test(None, false)?;
+    let store = store_temp(None, false)?;
     let (loaded_model, stored_model) = basic_test(pod_style()?, &store)?;
     assert_eq!(loaded_model, stored_model, "Loaded model doesn't match.");
     Ok(())
@@ -68,7 +69,7 @@ fn pod_basic() -> Result<()> {
 
 #[test]
 fn pod_job_basic() -> Result<()> {
-    let store = store_test(None, false)?;
+    let store = store_temp(None, false)?;
     let (loaded_model, mut stored_model) =
         basic_test(pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?, &store)?;
     stored_model.pod.annotation = None;
@@ -78,7 +79,7 @@ fn pod_job_basic() -> Result<()> {
 
 #[test]
 fn pod_result_basic() -> Result<()> {
-    let store = store_test(None, false)?;
+    let store = store_temp(None, false)?;
     let (loaded_model, mut stored_model) =
         basic_test(pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?, &store)?;
     stored_model.pod_job.annotation = None;
@@ -92,7 +93,7 @@ fn pod_files() -> Result<()> {
     let store_directory = String::from(tempdir()?.path().to_string_lossy());
     {
         let pod_style = pod_style()?;
-        let store = store_test(Some(&store_directory), false)?;
+        let store = store_temp(Some(&store_directory), false)?;
         let annotation = pod_style
             .annotation
             .as_ref()
@@ -127,14 +128,14 @@ fn pod_files() -> Result<()> {
 
 #[test]
 fn pod_list_empty() -> Result<()> {
-    let store = store_test(None, false)?;
+    let store = store_temp(None, false)?;
     assert_eq!(store.list_pod()?, vec![], "Pod list is not empty.");
     Ok(())
 }
 
 #[test]
 fn pod_load_from_hash() -> Result<()> {
-    let store = store_test(None, false)?;
+    let store = store_temp(None, false)?;
     let mut stored_model = add_storage(pod_style()?, &store)?;
     stored_model.model.annotation = None;
     let loaded_pod = stored_model
@@ -149,7 +150,7 @@ fn pod_load_from_hash() -> Result<()> {
 
 #[test]
 fn pod_annotation_delete() -> Result<()> {
-    let store = store_test(None, false)?;
+    let store = store_temp(None, false)?;
     let mut stored_model = add_storage(pod_style()?, &store)?;
     let model_version = &stored_model
         .model
@@ -157,6 +158,7 @@ fn pod_annotation_delete() -> Result<()> {
         .as_ref()
         .map(|x| x.version.clone());
     let model_hash = &stored_model.model.hash;
+    // case 1: save new annotation, assert list gives 3 entries: hash, annotations (original, new).
     stored_model.model.annotation = Some(Annotation {
         name: "new-name".to_owned(),
         version: "0.5.0".to_owned(),
@@ -184,6 +186,7 @@ fn pod_annotation_delete() -> Result<()> {
         ],
         "Pod list didn't return 3 expected entries."
     );
+    // case 2: delete new annotation, assert list gives 2 entries: hash, annotation (original).
     store.delete_annotation::<Pod>("new-name", "0.5.0")?;
     assert_eq!(
         store.list_pod()?,
@@ -201,6 +204,7 @@ fn pod_annotation_delete() -> Result<()> {
         ],
         "Pod list didn't return 2 expected entry."
     );
+    // case 3: delete original annotation, assert list gives 1 entry: hash.
     store.delete_annotation::<Pod>(
         "style-transfer",
         &model_version
@@ -216,12 +220,97 @@ fn pod_annotation_delete() -> Result<()> {
         }],
         "Pod list didn't return 1 expected entry."
     );
+    // case 4: delete invalid annotation, error should be returned.
     assert!(
         store
             .delete_annotation::<Pod>("style-transfer", "9.9.9")
             .expect_err("Unexpectedly succeeded.")
             .is_invalid_annotation(),
         "Returned a different OrcaError than one expected when deleting an invalid annotation."
+    );
+    Ok(())
+}
+
+#[test]
+fn pod_annotation_unique() -> Result<()> {
+    let store = store_temp(None, false)?;
+    let original_annotation = Annotation {
+        name: "example".to_owned(),
+        version: "1.0.0".to_owned(),
+        description: "original".to_owned(),
+    };
+    let mut pod = pod_style()?;
+    pod.annotation = Some(original_annotation.clone());
+    let mut stored_model = add_storage(pod, &store)?;
+    let original_hash = stored_model.model.hash.clone();
+    // case 1: Only change description, should skip saving model and annotation
+    stored_model.model.annotation = Some(Annotation {
+        description: "new".to_owned(),
+        ..original_annotation.clone()
+    });
+    store.save_pod(&stored_model.model)?;
+    assert_eq!(
+        store.list_pod()?,
+        vec![
+            ModelInfo {
+                name: Some(original_annotation.name.clone()),
+                version: Some(original_annotation.version.clone()),
+                hash: original_hash.clone(),
+            },
+            ModelInfo {
+                name: None,
+                version: None,
+                hash: original_hash.clone(),
+            },
+        ],
+        "Pod list didn't return 2 expected entries."
+    );
+    assert_eq!(
+        store
+            .load_pod(&ModelID::Annotation(
+                original_annotation.name.clone(),
+                original_annotation.version.clone()
+            ))?
+            .annotation,
+        Some(original_annotation.clone()),
+        "Pod annotation unexpected."
+    );
+    // case 2: Change description + model, should save model but skip annotation
+    let mut pod2 = stored_model.model.clone();
+    pod2.output_dir = "/output_2".into();
+    pod2.hash = hash_buffer(to_yaml(&pod2)?);
+    let new_hash = pod2.hash.clone();
+    store.save_pod(&pod2)?;
+    assert_eq!(
+        store.list_pod()?,
+        vec![
+            ModelInfo {
+                name: Some(original_annotation.name.clone()),
+                version: Some(original_annotation.version.clone()),
+                hash: original_hash.clone(),
+            },
+            ModelInfo {
+                name: None,
+                version: None,
+                hash: original_hash,
+            },
+            ModelInfo {
+                name: None,
+                version: None,
+                hash: new_hash,
+            },
+        ],
+        "Pod list didn't return 3 expected entries."
+    );
+    assert_eq!(
+        store
+            .load_pod(&ModelID::Annotation(
+                original_annotation.name.clone(),
+                original_annotation.version.clone()
+            ))?
+            .annotation,
+        Some(original_annotation),
+        "Pod annotation unexpected."
     );
     Ok(())
 }
