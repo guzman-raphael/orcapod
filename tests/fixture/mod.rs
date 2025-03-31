@@ -4,7 +4,6 @@
     missing_docs,
     clippy::missing_panics_doc,
     clippy::unwrap_in_result,
-    clippy::indexing_slicing,
     reason = "OK in tests."
 )]
 
@@ -13,18 +12,17 @@ use orcapod::{
     error::Result,
     model::{Annotation, Blob, BlobKind, Input, OrcaPath, Pod, PodJob, PodResult, StreamInfo},
     orchestrator::Status,
-    store::{filestore::LocalFileStore, ModelID, ModelInfo, Store as _},
+    store::{ModelID, ModelInfo, Store},
 };
 use std::{
     collections::HashMap,
     fs::{self, File},
     hash::RandomState,
-    ops::Deref,
     path::{Path, PathBuf},
     process::{Command, Stdio},
     sync::LazyLock,
 };
-use tempfile::tempdir;
+use tempfile::TempDir;
 
 // --- fixtures ---
 
@@ -189,69 +187,35 @@ pub fn container_image_style(binary_location: impl AsRef<Path>) -> Result<TestCo
     })
 }
 
-pub fn store_temp(store_directory: Option<&str>, with_default_data: bool) -> Result<TestStore> {
-    let temp_directory = String::from(tempdir()?.path().to_string_lossy());
-    let store =
-        store_directory.map_or_else(|| LocalFileStore::new(temp_directory), LocalFileStore::new);
-    fs::create_dir_all(store.get_directory())?;
-    let namespace_lookup: HashMap<String, PathBuf>;
-    if with_default_data {
-        namespace_lookup =
-            HashMap::from([("default".to_owned(), store.get_directory().join("default"))]);
-        Command::new("cp")
-            .arg("-r")
-            .arg("./tests/data")
-            .arg(&namespace_lookup["default"])
-            .output()?;
-    } else {
-        namespace_lookup = HashMap::new();
-    }
-    Ok(TestStore {
-        store,
-        namespace_lookup_read_write: namespace_lookup,
-    })
-}
-
-// --- helper functions ---
-
-pub fn add_storage<T: TestSetup>(model: T, store: &TestStore) -> Result<TestStoredModel<T>> {
-    model.save(store)?;
-    let model_with_storage = TestStoredModel { store, model };
-    Ok(model_with_storage)
-}
-
 // --- util ---
 
-#[derive(Debug)]
-pub struct TestStore {
-    pub store: LocalFileStore,
-    pub namespace_lookup_read_write: HashMap<String, PathBuf>,
-}
+pub struct TestDirs(pub HashMap<String, TempDir>);
 
-#[derive(Debug)]
-pub struct TestStoredModel<'base, T: TestSetup> {
-    pub store: &'base TestStore,
-    pub model: T,
-}
-
-impl Deref for TestStore {
-    type Target = LocalFileStore;
-    fn deref(&self) -> &Self::Target {
-        &self.store
+impl TestDirs {
+    pub fn new(config: &HashMap<String, Option<impl AsRef<Path>>>) -> Result<Self> {
+        Ok(Self(
+            config
+                .iter()
+                .map(|(namespace, copy_from)| {
+                    let temp_dir = TempDir::with_prefix_in("", "tests/.tmp")?;
+                    if let Some(source) = copy_from {
+                        Command::new("rsync")
+                            .arg("-a")
+                            .arg("--delete")
+                            .arg(source.as_ref())
+                            .arg(temp_dir.path())
+                            .output()?;
+                    }
+                    Ok((namespace.clone(), temp_dir))
+                })
+                .collect::<Result<_>>()?,
+        ))
     }
-}
-
-impl Drop for TestStore {
-    fn drop(&mut self) {
-        fs::remove_dir_all(self.store.get_directory()).expect("Failed to teardown store.");
-    }
-}
-
-impl<T: TestSetup> Drop for TestStoredModel<'_, T> {
-    fn drop(&mut self) {
-        self.model
-            .delete(self.store)
-            .expect("Failed to teardown model.");
+    pub fn namespace_lookup(&self) -> HashMap<String, PathBuf> {
+        self.0
+            .iter()
+            .map(|(key, directory)| (key.clone(), directory.path().into()))
+            .collect()
     }
 }
 
@@ -273,25 +237,23 @@ impl Drop for TestContainerImage {
     }
 }
 
-pub trait TestSetup {
-    type Target;
-    fn save(&self, store: &LocalFileStore) -> Result<()>;
-    fn delete(&self, store: &LocalFileStore) -> Result<()>;
-    fn load(&self, store: &LocalFileStore) -> Result<Self::Target>;
+pub trait TestSetup: Sized {
+    fn save(&self, store: &impl Store) -> Result<()>;
+    fn delete(&self, store: &impl Store) -> Result<()>;
+    fn load(&self, store: &impl Store) -> Result<Self>;
     fn get_annotation(&self) -> Option<&Annotation>;
     fn get_hash(&self) -> &str;
-    fn list(&self, store: &LocalFileStore) -> Result<Vec<ModelInfo>>;
+    fn list(&self, store: &impl Store) -> Result<Vec<ModelInfo>>;
 }
 
 impl TestSetup for Pod {
-    type Target = Self;
-    fn save(&self, store: &LocalFileStore) -> Result<()> {
+    fn save(&self, store: &impl Store) -> Result<()> {
         store.save_pod(self)
     }
-    fn delete(&self, store: &LocalFileStore) -> Result<()> {
+    fn delete(&self, store: &impl Store) -> Result<()> {
         store.delete_pod(&ModelID::Hash(self.hash.clone()))
     }
-    fn load(&self, store: &LocalFileStore) -> Result<Self::Target> {
+    fn load(&self, store: &impl Store) -> Result<Self> {
         let annotation = self.annotation.as_ref().expect("Annotation missing.");
         store.load_pod(&ModelID::Annotation(
             annotation.name.clone(),
@@ -304,20 +266,19 @@ impl TestSetup for Pod {
     fn get_hash(&self) -> &str {
         &self.hash
     }
-    fn list(&self, store: &LocalFileStore) -> Result<Vec<ModelInfo>> {
+    fn list(&self, store: &impl Store) -> Result<Vec<ModelInfo>> {
         store.list_pod()
     }
 }
 
 impl TestSetup for PodJob {
-    type Target = Self;
-    fn save(&self, store: &LocalFileStore) -> Result<()> {
+    fn save(&self, store: &impl Store) -> Result<()> {
         store.save_pod_job(self)
     }
-    fn delete(&self, store: &LocalFileStore) -> Result<()> {
+    fn delete(&self, store: &impl Store) -> Result<()> {
         store.delete_pod_job(&ModelID::Hash(self.hash.clone()))
     }
-    fn load(&self, store: &LocalFileStore) -> Result<Self::Target> {
+    fn load(&self, store: &impl Store) -> Result<Self> {
         let annotation = self.annotation.as_ref().expect("Annotation missing.");
         store.load_pod_job(&ModelID::Annotation(
             annotation.name.clone(),
@@ -330,20 +291,19 @@ impl TestSetup for PodJob {
     fn get_hash(&self) -> &str {
         &self.hash
     }
-    fn list(&self, store: &LocalFileStore) -> Result<Vec<ModelInfo>> {
+    fn list(&self, store: &impl Store) -> Result<Vec<ModelInfo>> {
         store.list_pod_job()
     }
 }
 
 impl TestSetup for PodResult {
-    type Target = Self;
-    fn save(&self, store: &LocalFileStore) -> Result<()> {
+    fn save(&self, store: &impl Store) -> Result<()> {
         store.save_pod_result(self)
     }
-    fn delete(&self, store: &LocalFileStore) -> Result<()> {
+    fn delete(&self, store: &impl Store) -> Result<()> {
         store.delete_pod_result(&ModelID::Hash(self.hash.clone()))
     }
-    fn load(&self, store: &LocalFileStore) -> Result<Self::Target> {
+    fn load(&self, store: &impl Store) -> Result<Self> {
         let annotation = self.annotation.as_ref().expect("Annotation missing.");
         store.load_pod_result(&ModelID::Annotation(
             annotation.name.clone(),
@@ -356,7 +316,7 @@ impl TestSetup for PodResult {
     fn get_hash(&self) -> &str {
         &self.hash
     }
-    fn list(&self, store: &LocalFileStore) -> Result<Vec<ModelInfo>> {
+    fn list(&self, store: &impl Store) -> Result<Vec<ModelInfo>> {
         store.list_pod_result()
     }
 }
