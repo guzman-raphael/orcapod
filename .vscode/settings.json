@@ -16,6 +16,10 @@
     "rust-analyzer.runnables.extraTestBinaryArgs": [
         "--nocapture"
     ],
+    "rust-analyzer.cargo.noDefaultFeatures": true,
+    "rust-analyzer.cargo.features": [
+        "test"
+    ],
     "files.autoSave": "off",
     "gitlens.showWelcomeOnInstall": false,
     "gitlens.showWhatsNewAfterUpgrades": false,
