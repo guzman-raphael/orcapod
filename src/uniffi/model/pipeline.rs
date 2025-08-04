@@ -11,6 +11,7 @@ use crate::{
             packet::{PathSet, URI},
             pod::Pod,
         },
+        pipeline::PipelineStatus,
     },
 };
 use derive_more::Display;
@@ -33,6 +34,13 @@ pub struct Pipeline {
     pub input_spec: HashMap<String, Vec<SpecURI>>,
     /// Exposed, internal output specification. Each output is associated with only one node/key.
     pub output_spec: HashMap<String, SpecURI>,
+}
+
+impl PartialEq for Pipeline {
+    fn eq(&self, other: &Self) -> bool {
+        // todo: change this to hash once implemented
+        self.input_spec == other.input_spec
+    }
 }
 
 #[uniffi::export]
@@ -63,7 +71,9 @@ impl Pipeline {
     clippy::field_scoped_visibility_modifiers,
     reason = "Temporary until a proper hash is implemented."
 )]
-#[derive(uniffi::Object, Debug, Display, CloneGetters, Deserialize, Serialize, Clone)]
+#[derive(
+    uniffi::Object, Debug, Display, CloneGetters, Deserialize, Serialize, Clone, PartialEq,
+)]
 #[getset(get_clone, impl_attrs = "#[uniffi::export]")]
 #[display("{self:#?}")]
 #[uniffi::export(Display)]
@@ -127,6 +137,19 @@ impl PipelineJob {
             output_dir: output_dir.clone(),
         })
     }
+}
+
+/// Result from a compute pipeline job run.
+#[derive(uniffi::Record, Debug, Serialize, Deserialize, PartialEq)]
+pub struct PipelineResult {
+    /// A pipeline job that originated the pipeline result.
+    pub pipeline_job: Arc<PipelineJob>,
+    /// Status of pipeline run when terminated.
+    pub status: PipelineStatus,
+    /// Time in epoch when created in seconds.
+    pub created: u64,
+    /// Time in epoch when terminated in seconds.
+    pub terminated: u64,
 }
 
 /// A node in a computational pipeline.

@@ -145,6 +145,7 @@ impl fmt::Debug for OrcaError {
             | Kind::NoMatchingPodRun { backtrace, .. }
             | Kind::NoRemainingServices { backtrace, .. }
             | Kind::NoTagFoundInContainerAltImage { backtrace, .. }
+            | Kind::PodFailed { backtrace, .. }
             | Kind::BollardError { backtrace, .. }
             | Kind::ChronoParseError { backtrace, .. }
             | Kind::DOTError { backtrace, .. }
