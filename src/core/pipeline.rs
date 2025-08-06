@@ -51,6 +51,10 @@ pub struct NodeInfo {
 }
 
 // + err state
+#[expect(
+    dead_code,
+    reason = "Failed message will be consumed once DOT reports are in."
+)]
 #[derive(Debug, Clone)]
 pub enum NodeState {
     Idle,
