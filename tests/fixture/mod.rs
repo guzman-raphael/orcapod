@@ -8,18 +8,19 @@
     reason = "OK in tests."
 )]
 
+use indoc::{formatdoc, indoc};
 use names::{Generator, Name};
 use orcapod::uniffi::{
     error::Result,
     model::{
         Annotation,
         packet::{Blob, BlobKind, Packet, PathInfo, PathSet, URI},
-        pod::{Pod, PodJob, PodResult},pipeline::{SpecURI, Kernel, PipelineJob, Pipeline}
+        pipeline::{Kernel, Pipeline, PipelineJob, SpecURI},
+        pod::{Pod, PodJob, PodResult},
     },
     orchestrator::PodStatus,
     store::{ModelID, ModelInfo, Store},
 };
-use indoc::{formatdoc, indoc};
 use std::{
     collections::HashMap,
     fs::{self, File, remove_dir_all},
@@ -126,7 +127,6 @@ pub fn pod_adder(duration_seconds: u8, last_command: &str) -> Result<Pod> {
         0.1,          // 100 millicores as frac cores
         10_u64 << 20, // 10 MiB in bytes
         None,
-        
     )
 }
 
@@ -354,31 +354,31 @@ pub fn pipeline_job_adder(
             (
                 "left_add_a".into(),
                 (1..4)
-                    .map(|i| PathSet::Unary (
-                        Blob {
+                    .map(|i| {
+                        PathSet::Unary(Blob {
                             kind: BlobKind::File,
                             location: URI {
                                 namespace: "default".into(),
                                 path: data_dir_filepath.join(format!("input/{i}.txt")),
                             },
                             checksum: String::new(),
-                        },
-                    ))
+                        })
+                    })
                     .collect(),
             ),
             (
                 "right_add_a".into(),
                 (4..6)
-                    .map(|i| PathSet::Unary (
-                        Blob {
+                    .map(|i| {
+                        PathSet::Unary(Blob {
                             kind: BlobKind::File,
                             location: URI {
                                 namespace: "default".into(),
                                 path: data_dir_filepath.join(format!("input/{i}.txt")),
                             },
                             checksum: String::new(),
-                        },
-                    ))
+                        })
+                    })
                     .collect(),
             ),
         ]
@@ -397,16 +397,14 @@ pub fn pipeline_job_adder(
             .map(|(i, k)| {
                 (
                     (*k).into(),
-                    vec![PathSet::Unary (
-                        Blob {
-                            kind: BlobKind::File,
-                            location: URI {
-                                namespace: "default".into(),
-                                path: data_dir_filepath.join(format!("input/{}.txt", i + 6)),
-                            },
-                            checksum: String::new(),
+                    vec![PathSet::Unary(Blob {
+                        kind: BlobKind::File,
+                        location: URI {
+                            namespace: "default".into(),
+                            path: data_dir_filepath.join(format!("input/{}.txt", i + 6)),
                         },
-                )],
+                        checksum: String::new(),
+                    })],
                 )
             }),
         )
