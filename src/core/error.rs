@@ -124,6 +124,7 @@ impl fmt::Debug for OrcaError {
             | Kind::IncompletePacket { backtrace, .. }
             | Kind::InvalidFilepath { backtrace, .. }
             | Kind::MissingInfo { backtrace, .. }
+            | Kind::PodFailed { backtrace, .. }
             | Kind::BollardError { backtrace, .. }
             | Kind::ChronoParseError { backtrace, .. }
             | Kind::DOTError { backtrace, .. }

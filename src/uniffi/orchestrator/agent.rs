@@ -1,12 +1,17 @@
 use crate::{
-    core::orchestrator::agent::start_service,
+    core::{orchestrator::agent::start_service, pipeline::process_pipeline_job},
     uniffi::{
         error::{OrcaError, Result, selector},
-        model::pod::PodJob,
+        model::{
+            pipeline::{PipelineJob, PipelineResult},
+            pod::PodJob,
+        },
         orchestrator::{Orchestrator, PodStatus, docker::LocalDockerOrchestrator},
+        pipeline::{PipelineRun, PipelineStatus},
         store::{Store as _, filestore::LocalFileStore},
     },
 };
+use chrono::Utc;
 use colored::Colorize as _;
 use derive_more::Display;
 use futures_executor::block_on;
@@ -54,7 +59,7 @@ pub struct AgentClient {
     pub(crate) session: zenoh::Session,
 }
 
-#[uniffi::export]
+#[uniffi::export(async_runtime = "tokio")]
 impl AgentClient {
     /// Create a client to connect to the agent network.
     ///
@@ -95,6 +100,73 @@ impl AgentClient {
             }
         }))
         .await
+    }
+    /// Start a prepared pipeline run to be processed asynchronously.
+    ///
+    /// # Errors
+    ///
+    /// Will fail if there is an issue publishing the pipeline job.
+    pub async fn start_pipeline_job(&self, pipeline_job: Arc<PipelineJob>) -> Result<PipelineRun> {
+        let pipeline_run = self.new_pipeline_run(&pipeline_job);
+        self.publish(
+            &format!("request/pipeline_job/{}", pipeline_run.pipeline_job.hash),
+            &pipeline_run.pipeline_job,
+        )
+        .await?;
+        Ok(pipeline_run)
+    }
+    /// Wait for pipeline result to be ready.
+    ///
+    /// # Panics
+    ///
+    /// Will panic if pipeline run is no longer active and terminated is unset.
+    ///
+    /// # Errors
+    ///
+    /// Will return `Err` if there is an issue creating a pipeline result.
+    #[expect(
+        clippy::indexing_slicing,
+        clippy::excessive_nesting,
+        clippy::expect_used,
+        reason = "Subscribe key expression ensures we will have enough elements."
+    )]
+    pub async fn get_pipeline_result(
+        &self,
+        pipeline_run: Arc<PipelineRun>,
+    ) -> Result<PipelineResult> {
+        let pipeline_run_status = pipeline_run.status();
+        Ok(match &pipeline_run_status {
+            PipelineStatus::Completed | PipelineStatus::Failed => PipelineResult {
+                pipeline_job: Arc::clone(&pipeline_run.pipeline_job),
+                created: pipeline_run.created,
+                terminated: pipeline_run.terminated().expect("debug"),
+                status: pipeline_run_status,
+            },
+            PipelineStatus::Running => {
+                let subscriber = self
+                    .session
+                    .declare_subscriber(&format!(
+                        "group/{}/*/pipeline_job/{}/**",
+                        self.group, pipeline_run.pipeline_job.hash
+                    ))
+                    .await
+                    .context(selector::AgentCommunicationFailure {})?;
+                let pipeline_result_result;
+                loop {
+                    let sample = subscriber
+                        .recv_async()
+                        .await
+                        .context(selector::AgentCommunicationFailure {})?;
+                    let topic_kind = sample.key_expr().as_str().split('/').collect::<Vec<_>>()[2];
+                    if ["success", "failure"].contains(&topic_kind) {
+                        pipeline_result_result =
+                            serde_json::from_slice::<PipelineResult>(&sample.payload().to_bytes())?;
+                        break;
+                    }
+                }
+                pipeline_result_result
+            }
+        })
     }
     /// Watch orchestration agent communication.
     ///
@@ -155,7 +227,11 @@ impl Agent {
     /// # Errors
     ///
     /// Will stop and return an error if encounters an error while processing any pod job request.
-    #[expect(clippy::excessive_nesting, reason = "Nesting manageable.")]
+    #[expect(
+        clippy::excessive_nesting,
+        clippy::cast_sign_loss,
+        reason = "Nesting manageable."
+    )]
     pub async fn start(
         &self,
         namespace_lookup: &HashMap<String, PathBuf>,
@@ -197,6 +273,40 @@ impl Agent {
                             ("hash", pod_result.pod_job.hash.clone()),
                         ]),
                         &pod_result,
+                    )
+                    .await
+            },
+        ));
+        services.spawn(start_service(
+            Arc::new(self.clone()),
+            "request/pipeline_job/**".to_owned(),
+            namespace_lookup.clone(),
+            async |agent, inner_namespace_lookup, _, pipeline_job: PipelineJob| {
+                process_pipeline_job(
+                    Arc::clone(&agent.client),
+                    format!("status/pipeline_job/{}/", pipeline_job.hash),
+                    "request/pod_job/",
+                    "success/pod_job/",
+                    "failure/pod_job/",
+                    pipeline_job,
+                    Utc::now().timestamp() as u64,
+                    inner_namespace_lookup,
+                )
+                .await
+            },
+            async |client, pipeline_result| {
+                client
+                    .publish(
+                        &format!(
+                            "{}/pipeline_job/{}",
+                            match &pipeline_result.status {
+                                PipelineStatus::Completed => "success",
+                                PipelineStatus::Failed => "failure",
+                                PipelineStatus::Running => todo!("Should not be possible."),
+                            },
+                            pipeline_result.pipeline_job.hash
+                        ),
+                        &pipeline_result,
                     )
                     .await
             },
