@@ -6,10 +6,8 @@ use serde_json;
 use serde_yaml;
 use std::{
     backtrace::{Backtrace, BacktraceStatus},
-    error::Error,
     fmt::{self, Formatter},
     io, path,
-    sync::PoisonError,
 };
 use tokio::task;
 
@@ -73,16 +71,6 @@ impl From<path::StripPrefixError> for OrcaError {
         }
     }
 }
-impl<T> From<PoisonError<T>> for OrcaError {
-    fn from(_: PoisonError<T>) -> Self {
-        Self {
-            kind: Kind::PoisonError {
-                source: Box::<dyn Error + Send + Sync>::from("PoisonError"),
-                backtrace: Some(Backtrace::capture()),
-            },
-        }
-    }
-}
 impl From<serde_json::Error> for OrcaError {
     fn from(error: serde_json::Error) -> Self {
         Self {
@@ -133,18 +121,9 @@ impl fmt::Debug for OrcaError {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match &self.kind {
             Kind::AgentCommunicationFailure { backtrace, .. }
-            | Kind::EmptyResponseWhenLoadingContainerAltImage { backtrace, .. }
-            | Kind::GeneratedNamesOverflow { backtrace, .. }
             | Kind::IncompletePacket { backtrace, .. }
             | Kind::InvalidFilepath { backtrace, .. }
-            | Kind::InvalidPodResultTerminatedDatetime { backtrace, .. }
-            | Kind::KeyMissing { backtrace, .. }
-            | Kind::NoAnnotationFound { backtrace, .. }
-            | Kind::NoContainerNames { backtrace, .. }
-            | Kind::NoFileName { backtrace, .. }
-            | Kind::NoMatchingPodRun { backtrace, .. }
-            | Kind::NoRemainingServices { backtrace, .. }
-            | Kind::NoTagFoundInContainerAltImage { backtrace, .. }
+            | Kind::MissingInfo { backtrace, .. }
             | Kind::PodFailed { backtrace, .. }
             | Kind::BollardError { backtrace, .. }
             | Kind::ChronoParseError { backtrace, .. }
@@ -152,7 +131,6 @@ impl fmt::Debug for OrcaError {
             | Kind::GlobPatternError { backtrace, .. }
             | Kind::IoError { backtrace, .. }
             | Kind::PathPrefixError { backtrace, .. }
-            | Kind::PoisonError { backtrace, .. }
             | Kind::SerdeJsonError { backtrace, .. }
             | Kind::SerdeYamlError { backtrace, .. }
             | Kind::TokioTaskJoinError { backtrace, .. } => {
