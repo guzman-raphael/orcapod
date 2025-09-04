@@ -1,0 +1,57 @@
+site_name: Orcapod 
+site_url: https://orcapod.org
+repo_url: https://github.com/guzman-raphael/orcapod
+
+theme:
+    name: material
+    palette:
+        - scheme: default
+          primary: light blue
+          accent: teal
+          toggle:
+            icon: material/weather-night
+            name: Switch to dark mode
+        - scheme: slate
+          primary: light blue
+          accent: lime
+          toggle:
+            icon: material/weather-sunny
+            name: Switch to light mode
+    logo: assets/logo.svg
+    features:
+            - toc.integrate
+            - search.suggest
+            - search.highlight
+            - content.code.copy
+
+extra:
+    version:
+        provider: manual
+        version: v0.1.0
+
+extra_css:
+    - styles/extra.css
+
+markdown_extensions:
+    - admonition
+    - pymdownx.details
+    - md_in_html 
+
+markdown_extensions:
+    - md_in_html
+
+nav:
+    - Home: index.md
+    - Getting started:
+        - Installation: installation.md
+        - Quickstart: quickstart.md
+    - Concepts:
+        - Pods: concepts/pods.md
+        - Pipelines: concepts/pipelines.md
+        - Agents: concepts/agents.md
+        - Operators (map & join): concepts/operators.md
+    - Tutorials:
+        - Example 1: tutorials/example1.md
+        - Example 2: tutorials/example2.md
+    - API Reference: api.md
+    - FAQ: faq.md

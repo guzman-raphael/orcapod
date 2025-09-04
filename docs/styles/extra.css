@@ -1,0 +1,60 @@
+/* Make the word Orcapod bigger */
+.md-nav--primary .md-nav__title {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: .2px;
+}
+  
+/* Indent children within the sections */
+.md-nav--primary .md-nav__item .md-nav__item > .md-nav__link {
+    padding-left: 0.5rem;  
+}
+
+/* FAQ CSS */
+/* Hide the icon on collapsible blocks */
+.md-typeset .admonition .admonition-title::before,
+.md-typeset details > summary::before {
+    display: none;
+}
+
+/* Individual cards */
+.md-typeset .faq details {
+    border: 1px solid var(--md-default-fg-color--lightest);
+    border-radius: 10px;
+    background: var(--md-code-bg-color); /* light gray in light mode */
+    margin: .65rem 0;                              
+    overflow: hidden;
+    transition: background-color .2s, border-color .2s, box-shadow .2s;
+}
+  
+/* Open state */
+.md-typeset .faq details[open] {
+    background: var(--md-default-bg-color); /* white (or dark bg in dark mode) */
+    box-shadow: none; /* remove teal line */
+    border-color: var(--md-default-fg-color--lightest);
+}
+  
+/* Question row */
+.md-typeset .faq details > summary {
+    padding: .9rem 1rem;
+    font-size: 14px;                               
+    font-weight: 700;
+    line-height: 1.35;
+    background: transparent;
+    cursor: pointer;
+}
+  
+/* Remove native markers and focus outlines that can look teal */
+.md-typeset .faq details > summary::-webkit-details-marker { display: none; }
+.md-typeset .faq details > summary::marker { content: ""; }
+.md-typeset .faq details > summary:focus,
+.md-typeset .faq details:focus-within {
+    outline: none !important;
+    box-shadow: none !important;
+}
+  
+/* Thin divider between question and answer when open */
+.md-typeset .faq details[open] > summary {
+    border-bottom: 1px solid var(--md-default-fg-color--lightest);
+}
+  
