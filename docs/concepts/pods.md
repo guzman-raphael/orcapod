@@ -10,5 +10,6 @@ Each Pod wraps a containerized command with declared **inputs** and **outputs**,
 - **Declared interface**: each Pod specifies named inputs and outputs (e.g. `left`, `right`, `answer`).  
 - **Composable**: outputs from one Pod can be connected to inputs of another via operators like `map` and `join`.
 
-## Example 
+## Example
+
 *Example coming soon...*
