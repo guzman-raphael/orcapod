@@ -4,6 +4,8 @@
 <h1 align="center">Orcapod</h1>
 <p align="center"><strong>A framework for fully traceable and reproducible scientific computation</strong></p>
 
+<!-- This should be the master readme, with the current readme moving to a dev page -->
+
 ## Project description
 
 Orcapod is an open-source framework for traceable and reproducible scientific computation. Work is defined as reusable **Pods** with declared inputs and outputs, executed in containers for consistent results. **Pipelines** connect pods as graphs and can run locally or across remote **Agents**. Current demos include visualization to make runs auditable, with more formal artifact and logging support planned.

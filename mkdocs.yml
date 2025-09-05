@@ -1,4 +1,4 @@
-site_name: Orcapod 
+site_name: Orcapod
 site_url: https://orcapod.org
 repo_url: https://github.com/guzman-raphael/orcapod
 
@@ -35,7 +35,7 @@ extra_css:
 markdown_extensions:
     - admonition
     - pymdownx.details
-    - md_in_html 
+    - md_in_html
 
 markdown_extensions:
     - md_in_html
@@ -49,7 +49,7 @@ nav:
         - Pods: concepts/pods.md
         - Pipelines: concepts/pipelines.md
         - Agents: concepts/agents.md
-        - Operators (map & join): concepts/operators.md
+        - Operators: concepts/operators.md
     - Tutorials:
         - Example 1: tutorials/example1.md
         - Example 2: tutorials/example2.md
