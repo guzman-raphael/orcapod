@@ -53,5 +53,6 @@ nav:
     - Tutorials:
         - Example 1: tutorials/example1.md
         - Example 2: tutorials/example2.md
+    - Developer: development.md
     - API Reference: api.md
     - FAQ: faq.md
