@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.png" alt="Orcapod logo" width="96">
+  <img src="docs/assets/logo.png" alt="Orcapod logo" width="96">
 </p>
 <h1 align="center">Orcapod</h1>
 <p align="center"><strong>A framework for fully traceable and reproducible scientific computation</strong></p>
@@ -28,7 +28,7 @@ Orcapod is an open-source framework for traceable and reproducible scientific co
 
 ## Architecture
 
-<img src="assets/architecture.jpg" alt="Orcapod Architecture" />
+<img src="docs/assets/architecture.jpg" alt="Orcapod Architecture" />
 High-level workflow in Orcapod: define a Pod in Python, register it in a pipeline, execute in Docker, and retrieve results as files.
 
 ## Documentation
