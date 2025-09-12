@@ -75,5 +75,5 @@ nav:
   - Developer: development.md
   - API Reference:
       - Python API: python.md
-      - Rust API: rust.md
+      - Rust API: https://guzman-raphael.github.io/orcapod/orcapod/
   - FAQ: faq.md
