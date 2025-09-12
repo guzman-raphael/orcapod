@@ -1,0 +1,79 @@
+site_name: Orcapod
+site_url: https://orcapod.org
+repo_url: https://github.com/guzman-raphael/orcapod
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: light blue
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: light blue
+      accent: lime
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  logo: assets/logo.svg
+  features:
+    - navigation.instant
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+
+extra:
+  version:
+    provider: manual
+    version: v0.1.0
+  generator: false # Remove watermark
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://censibal.com/
+      name: Censibal Website
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/censibal
+      name: Censibal LinkedIn
+    - icon: fontawesome/brands/github
+      link: https://github.com/guzman-raphael/orcapod
+
+extra_css:
+  - styles/extra.css
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - md_in_html
+  - codehilite:
+      guess_lang: false
+  - pymdownx.highlight:
+      linenums: false
+  - pymdownx.superfences
+
+plugins:
+  - search
+  - literate-nav
+  - mkdocs-jupyter:
+      execute: False
+      include_source: True
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - Quickstart: quickstart.md
+      - Installation: installation.md
+  - Concepts:
+      - Pods: concepts/pods.md
+      - Pipelines: concepts/pipelines.md
+      - Agents: concepts/agents.md
+      - Operators: concepts/operators.md
+  - Tutorials:
+      - Pipeline Tutorial: tutorials/pipeline_test.ipynb
+  - Developer: development.md
+  - API Reference:
+      - Python API: python.md
+      - Rust API: https://guzman-raphael.github.io/orcapod/orcapod/
+  - FAQ: faq.md

@@ -1,94 +1,95 @@
-[![orcapod API docs](https://img.shields.io/website?url=https://walkerlab.github.io/orcapod/&label=docs)
-](https://walkerlab.github.io/orcapod/)
-[![codecov](https://codecov.io/github/walkerlab/orcapod/graph/badge.svg)](https://codecov.io/github/walkerlab/orcapod)
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Orcapod logo" width="96">
+</p>
+<h1 align="center">Orcapod</h1>
+<p align="center"><strong>A framework for fully traceable and reproducible scientific computation</strong></p>
 
-# orcapod
+## Project description
 
-![orcapod crate diagram](docs/images/orcapod_diagram.svg "Orcapod Crate Diagram")
+Orcapod is an open-source framework for traceable and reproducible scientific computation. Work is defined as reusable **Pods** with declared inputs and outputs, executed in containers for consistent results. **Pipelines** connect pods as graphs and can run locally or across remote **Agents**. Current demos include visualization to make runs auditable, with more formal artifact and logging support planned.
 
-## Tests
+### Core features
 
-```bash
-#!/bin/bash
-set -e  # fail early on non-zero exit
-cargo clippy --no-default-features --features=test --all-targets -- -D warnings  # Rust syntax and style tests
-cargo fmt --check  # Rust formatting test
-cargo llvm-cov --no-default-features --features=test --no-clean --ignore-filename-regex "bin/.*|lib\.rs" -- --nocapture  # Rust integration tests w/ stdout coverage summary
-cargo llvm-cov --no-default-features --features=test --no-clean --ignore-filename-regex "bin/.*|lib\.rs" --html -- --nocapture  # Rust integration tests w/ HTML coverage report (target/llvm-cov/html/index.html)
-cargo llvm-cov --no-default-features --features=test --no-clean --ignore-filename-regex "bin/.*|lib\.rs" --codecov --output-path target/llvm-cov-target/codecov.json -- --nocapture  # Rust integration tests w/ codecov coverage report
-cargo llvm-cov --no-default-features --features=test --no-clean --ignore-filename-regex "bin/.*|lib\.rs" --cobertura --output-path target/llvm-cov-target/cobertura.xml -- --nocapture  # Rust integration tests w/ cobertura coverage report
-. ~/.local/share/base/bin/activate && maturin develop --uv && export RUST_BACKTRACE=1 && python tests/extra/python/smoke_test.py -- tests/.tmp && python tests/extra/python/agent_test.py # Python integration tests
-```
+- **Pods**: reusable compute units with named inputs and outputs
+- **Pipelines**: compose pods into directed graphs
+- **Agents**: distributed workers that execute pods locally or remotely in parallel, reporting live status and logs
+- **Containerized execution**: consistent results across machines
+- **Local orchestrator and store**: simple setup for laptop use
+- **Operators**: utilities like `map` and `join` for data plumbing
+- **Run records**: metadata and logs are stored for each run; artifact tracking is currently demonstrated in demo
 
-## Docs
+### Advantages
 
-```bash
-cargo doc --no-deps                       # gen api docs (target/doc/orcapod/index.html)
-DIAGRAM_SCOPE="orcapod::uniffi::{model::{Pod, PodJob, PodResult, Pipeline, PipelineJob, PipelineResult},orchestrator::{PodRun,docker::LocalDockerOrchestrator,agent::{AgentClient, Agent}},pipeline::PipelineRun,store::filestore::LocalFileStore}"
-cargo modules dependencies --lib --max-depth 0 --no-uses --no-fns --focus-on $DIAGRAM_SCOPE --layout dot > docs/images/orcapod_diagram.dot # orcapod diagram as DOT
-cargo modules dependencies --lib --max-depth 0 --no-uses --no-fns --focus-on $DIAGRAM_SCOPE --layout dot | dot -T png > docs/images/orcapod_diagram.png # orcapod diagram as PNG
-cargo modules dependencies --lib --max-depth 0 --no-uses --no-fns --focus-on $DIAGRAM_SCOPE --layout dot | dot -T svg > docs/images/orcapod_diagram.svg # orcapod diagram as SVG
-```
+- Containerization: per-analysis dependency setting
+- Fault-permissible: downstream steps run all available jobs
+- Platform-independent: migrate easily between local and cloud infrastructure
 
-## Project Management
+## Architecture
 
-Progress is tracked under GH project [orcapod](https://github.com/orgs/walkerlab/projects/2).
-We track only issues in the project so don't add PRs.
+<img src="docs/assets/OrcapodPipeline.svg" alt="Orcapod Architecture" />
 
-### Flow
+High-level workflow in Orcapod: define a Pod in Python, register it in a pipeline, execute in Docker, and retrieve results as files.
 
-1. Contributor indicates to others they are picking up an issue by:
-   - Self-assigning the issue
-   - Opening a draft PR to `dev` branch that links the issue(s) it will fix
-   - Updating the issue status to `In Progress`
-2. Contributor indicates to others their contribution is ready for review by:
-   - Marking their draft PR as `Ready for Review`
-   - Assigning reviewers
-   - Updating the issue status to `Ready for Review`
-3. Reviewers should do the following after submitting a review:
-   - If any updates were requested:
-     - Update the issue status to `Changes Requested`
-   - If changes are approved:
-     - Merge the PR
-     - Either update the issue status to `Done` or close the issue manually
-4. Contributors working on reviewer requested changes should:
-   - Convert their PR to draft
-   - Update the issue status to `In Progress`
-   - Repeat steps 2 and 3 as needed
+## Documentation
 
-### Views
+Full documentation is available at [orcapod.org](https://orcapod.org/).
 
-- `Overview`: A birdseye view of issues in table form. Convenient for sorting and updating priority, estimate, assignee, and status.
-- `Kanban`: A board to capture live progress visually. Status can be updated by dragging cards to their appropriate status column.
+- [Tutorials and examples]() {link pipeline doc}
+- API reference (Coming Soon!)
 
-### Automation Note
+## Installation
 
-- Newly opened issues are automatically added with the status `Todo`
-- Reopened issues will automatically update status to `Todo`
-- Issue will automatically close once their status is updated to `Done`
-- Manually closed issues will automatically update status to `Done`
+Set up the Orcapod development environment and run in a reproducible container.
 
-## Set permissions to system defaults
+### Prerequisites
+
+- Docker Desktop or Docker Engine installed
+- VS Code with these extensions: Dev Containers, Jupyter
+- Git
+
+### Open the repo in a dev container
 
 ```bash
-# based on debian
-chmod u=rwx,g=rx,o=rx $(find . -not -path "./.git*" -type d | sort)  # directories
-chmod u=rw,g=r,o=r $(find . -not -path "./.git/*" -type f | sort)  # files
+git clone https://github.com/guzman-raphael/orcapod
+cd orcapod
 ```
 
-## Limit DevContainer Resource Access
+1. In VS Code, open the command palette
+2. Select _Dev Containers: Reopen in Container_
+3. Wait for the container to build and start
+4. Run notebooks inside the container
 
-You can easily enforce resource limits by adding the following to `devcontainer.json`.
+### Adding dependencies for a Pod
 
-```json
-{
-  // ..
-  "runArgs": [
-    // ..
-    "--cpus=2",
-    "--memory=8gb",
-    // ..
-  ],
-  // ..
-}
-```
+1. **Reuse an existing Docker image** that already has the dependencies you need (best for speed and reproducibility).
+2. **Build and publish your own Docker image** with the dependencies, then point the Pod to that image (best for custom needs).
+3. **Use `pip install` inside the Pod’s command** (works, but slower and less reproducible; fine for quick tests).
+
+## Roadmap
+
+Upcoming priorities:
+
+- **Pythonic API**: simplify Docker work with decorators and automation that can turn Python functions into images.
+- **New orchestrators**: support Kubernetes for production workloads, with Slurm and AWS ECS on the roadmap.
+- **Dashboards**: Python-based GUIs and registries so users can compose pipelines visually, not only in code.
+- **Observability**: richer intermediate node states and logs, better result inspection, and support for queries and data exploration.
+- **Multi-agent execution**: coordinated agents in a mesh for parallelism with no single point of failure.
+- **Tutorials**: invest in content to help new users succeed.
+
+## Authors and Maintainers
+
+- **Raphael Guzman** - Censibal
+
+## Contributing
+
+We welcome contributions!
+
+### How to get started
+
+- **Submit an issue** if you find a bug, have a question, or want to suggest a feature.
+
+### Pull request checklist
+
+- The PR title clearly describes the change
+- Added or updated documentation if needed
+- Linked the PR to related issue(s) if applicable
