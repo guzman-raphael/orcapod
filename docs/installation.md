@@ -16,13 +16,15 @@ Install instructions:
 - **Windows (requires WSL 2):**
     1. Open **PowerShell (Admin)** and run:
 
-        ```
+        ```bash
            wsl --install
-        ```.
+        ```
+
         Reboot if prompted.
+
     2. Ensure WSL 2 is the default:
 
-        ```
+        ```bash
             wsl --set-default-version 2
         ```
 
@@ -30,7 +32,7 @@ Install instructions:
 
 - **Linux:** Install [Docker Engine](https://docs.docker.com/engine/install/)
 
-**Verify Docker**
+### Verify Docker
 
 ```bash
 docker --version

@@ -1,11 +1,11 @@
 # Quickstart
 
-Follow these steps to run your first Orcapod pipeline demo.  
+Follow these steps to run your first Orcapod pipeline demo.
 
 ## 1. Clone the repository
 
 ```bash
-git clone https://github.com/walkerlab/orcapod
+git clone https://github.com/guzman-raphael/orcapod
 ```
 
 ## 2. Switch to the pipeline branch

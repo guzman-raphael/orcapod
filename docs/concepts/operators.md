@@ -47,7 +47,7 @@ Notes:
 
 ---
 
-### Example
+### Example: Map
 
 ```python
 # Example: using a map operator to rename 'answer' -> 'left'
@@ -108,7 +108,7 @@ As new outputs arrive, the join operator continues producing combinations:
 
 ---
 
-### Example
+### Example: Join
 
 ```python
 # Example: join operator producing the Cartesian expansion of two mapped streams

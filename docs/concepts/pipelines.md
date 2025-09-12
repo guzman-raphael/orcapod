@@ -6,10 +6,10 @@ Pipelines define how outputs from one Pod become inputs to another, and they can
 ## Key points
 
 - Pipelines are **graphs**, not just linear chains. They can fan out and fan in.
-  - **<a href="/concepts/operators">map</a>** retags outputs so they align with the expected inputs of the next Pod.
-  - **<a href="/concepts/operators">join</a>** combines multiple inputs, building Cartesian products for parallel execution.
+  - **[map](operators.md#map-operator)** retags outputs so they align with the expected inputs of the next Pod.
+  - **[join](operators.md#join-operator)** combines multiple inputs, building Cartesian products for parallel execution.
 - The **orchestrator** schedules Pods in the pipeline and assigns them to Agents.
-- **<a href="/concepts/agents">Agents</a>** run Pods in parallel and send back status signals such as progress, completion, and failure.
+- **[Agents](agents.md)** run Pods in parallel and send back status signals such as *progress*, *complete*, *fail*, and *cancel*.
 - If one Pod fails, only its dependent steps are cancelled, while other branches of the pipeline continue (fault-permissible execution).
 - Pipelines persist results through the store, making runs auditable and reproducible.
 
