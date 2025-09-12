@@ -58,3 +58,11 @@
     border-bottom: 1px solid var(--md-default-fg-color--lightest);
 }
   
+.md-footer,
+.md-footer-nav,
+.md-footer-meta {
+  background-color: #5856565b !important; 
+}
+  
+  
+  

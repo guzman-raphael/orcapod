@@ -3,56 +3,64 @@ site_url: https://orcapod.org
 repo_url: https://github.com/guzman-raphael/orcapod
 
 theme:
-    name: material
-    palette:
-        - scheme: default
-          primary: light blue
-          accent: teal
-          toggle:
-            icon: material/weather-night
-            name: Switch to dark mode
-        - scheme: slate
-          primary: light blue
-          accent: lime
-          toggle:
-            icon: material/weather-sunny
-            name: Switch to light mode
-    logo: assets/logo.svg
-    features:
-            - toc.integrate
-            - search.suggest
-            - search.highlight
-            - content.code.copy
+  name: material
+  palette:
+    - scheme: default
+      primary: light blue
+      accent: teal
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: light blue
+      accent: lime
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  logo: assets/logo.svg
+  features:
+    - navigation.instant
+    - toc.integrate
+    - search.suggest
+    - search.highlight
+    - content.code.copy
 
 extra:
-    version:
-        provider: manual
-        version: v0.1.0
+  version:
+    provider: manual
+    version: v0.1.0
+  generator: false # Remove watermarks
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://censibal.com/
+      name: Censibal Website
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/censibal
+      name: Censibal LinkedIn
+    - icon: fontawesome/brands/github
+      link: https://github.com/guzman-raphael/orcapod
 
 extra_css:
-    - styles/extra.css
+  - styles/extra.css
 
 markdown_extensions:
-    - admonition
-    - pymdownx.details
-    - md_in_html
-
-markdown_extensions:
-    - md_in_html
+  - admonition
+  - pymdownx.details
+  - md_in_html
 
 nav:
-    - Home: index.md
-    - Getting started:
-        - Installation: installation.md
-        - Quickstart: quickstart.md
-    - Concepts:
-        - Pods: concepts/pods.md
-        - Pipelines: concepts/pipelines.md
-        - Agents: concepts/agents.md
-        - Operators: concepts/operators.md
-    - Tutorials:
-        - Example 1: tutorials/example1.md
-        - Example 2: tutorials/example2.md
-    - Developer: development.md
-    - API Reference: api.md
-    - FAQ: faq.md
+  - Home: index.md
+  - Getting started:
+      - Quickstart: quickstart.md
+      - Installation: installation.md
+  - Concepts:
+      - Pods: concepts/pods.md
+      - Pipelines: concepts/pipelines.md
+      - Agents: concepts/agents.md
+      - Operators: concepts/operators.md
+  - Tutorials:
+      - Example 1: tutorials/example1.md
+      - Example 2: tutorials/example2.md
+  - Developer: development.md
+  - API Reference: api.md
+  - FAQ: faq.md
