@@ -51,6 +51,7 @@ Set up the Orcapod development environment and run in a reproducible container.
 
 ```bash
 git clone https://github.com/guzman-raphael/orcapod
+cd orcapod
 ```
 
 1. In VS Code, open the command palette
@@ -77,9 +78,7 @@ Upcoming priorities:
 
 ## Authors and Maintainers
 
-- **Walker Lab**
 - **Raphael Guzman** - Censibal
-- (Additional contributors and contact information coming soon)
 
 ## Contributing
 
@@ -91,6 +90,6 @@ We welcome contributions!
 
 ### Pull request checklist
 
-- Item 1
-- Item 2
-- Item 3
+- The PR title clearly describes the change
+- Added or updated documentation if needed
+- Linked the PR to related issue(s) if applicable
