@@ -29,7 +29,7 @@ extra:
   version:
     provider: manual
     version: v0.1.0
-  generator: false # Remove watermarks
+  generator: false # Remove watermark
   social:
     - icon: fontawesome/solid/globe
       link: https://censibal.com/
@@ -51,8 +51,8 @@ markdown_extensions:
 plugins:
   - search
   - mkdocs-jupyter:
-    execute: False
-    include_source: True
+      execute: False
+      include_source: True
 
 nav:
   - Home: index.md
@@ -65,8 +65,7 @@ nav:
       - Agents: concepts/agents.md
       - Operators: concepts/operators.md
   - Tutorials:
-      - Example 1: tutorials/example1.md
-      - Example 2: tutorials/example2.md
+      - Pipeline Tutorial: tutorials/pipeline_test.ipynb
   - Developer: development.md
   - API Reference:
       - Python API: python.md
