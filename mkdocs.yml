@@ -48,6 +48,12 @@ markdown_extensions:
   - pymdownx.details
   - md_in_html
 
+plugins:
+  - search
+  - mkdocs-jupyter:
+    execute: False
+    include_source: True
+
 nav:
   - Home: index.md
   - Getting started:
@@ -62,5 +68,7 @@ nav:
       - Example 1: tutorials/example1.md
       - Example 2: tutorials/example2.md
   - Developer: development.md
-  - API Reference: api.md
+  - API Reference:
+      - Python API: python.md
+      - Rust API: rust.md
   - FAQ: faq.md
