@@ -47,9 +47,15 @@ markdown_extensions:
   - admonition
   - pymdownx.details
   - md_in_html
+  - codehilite:
+      guess_lang: false
+  - pymdownx.highlight:
+      linenums: false
+  - pymdownx.superfences
 
 plugins:
   - search
+  - literate-nav
   - mkdocs-jupyter:
       execute: False
       include_source: True
