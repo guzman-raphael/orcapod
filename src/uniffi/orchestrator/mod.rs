@@ -31,7 +31,7 @@ pub enum PodStatus {
     #[default]
     Unset,
 }
-/// Run metadata
+/// Run metadata.
 #[derive(uniffi::Record, Debug)]
 pub struct PodRunInfo {
     /// Environment utilized.

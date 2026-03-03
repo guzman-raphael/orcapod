@@ -68,7 +68,7 @@ impl Pipeline {
 #[display("{self:#?}")]
 #[uniffi::export(Display)]
 pub struct PipelineJob {
-    /// todo: replace with a consistent hash
+    /// todo: replace with a consistent hash.
     #[getset(skip)]
     pub(crate) hash: String,
     /// A pipeline to base the pipeline job on.

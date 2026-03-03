@@ -30,9 +30,9 @@ use zenoh;
 /// request to determine what to retry.
 #[derive(uniffi::Enum)]
 pub enum Response {
-    /// Success
+    /// Success.
     Ok,
-    /// Error cast to `String`
+    /// Error cast to `String`.
     Err(String),
 }
 
