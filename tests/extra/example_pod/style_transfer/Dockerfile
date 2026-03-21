@@ -14,7 +14,7 @@
 #   example.server.com/user/style-transfer:1.0.0 \
 #   /run.py
 # docker ps -f 'label=org.orcapod=true'
-FROM python:3.9-slim
-RUN pip install opencv-python-headless numpy imutils
+FROM python:3.11-slim
+RUN pip install opencv-python-headless==4.10.0.84 numpy==1.26.4 imutils==0.5.4
 COPY ./run.py /run.py
 CMD ["python", "/run.py"]
