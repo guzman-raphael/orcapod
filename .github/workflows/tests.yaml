@@ -25,7 +25,7 @@ jobs:
     steps:
       - name: Setup Docker
         run: |
-          brew install docker
+          brew install docker colima
           colima start
       - uses: actions/checkout@v4
       - name: Run Rust Syntax, Style, Format, and Integration Tests
