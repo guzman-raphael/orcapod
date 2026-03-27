@@ -2,7 +2,6 @@ import os
 from time import sleep
 import cv2
 import numpy as np
-import imutils
 
 if os.getenv("RAISE_ERROR", "false").upper() == "TRUE":
     raise Exception("Raising requested error...")
@@ -25,13 +24,21 @@ for style_path, result_path in style_path_map.items():
     prepared_image = np.frombuffer(image, np.uint8)
     prepared_image = cv2.imdecode(prepared_image, cv2.IMREAD_COLOR)
 
-    prepared_image = imutils.resize(prepared_image, width=600)
+    r = 600.0 / prepared_image.shape[1]
+    dim = (600, int(prepared_image.shape[0] * r))
+    prepared_image = cv2.resize(prepared_image, dim, interpolation=cv2.INTER_AREA)
     (h, w) = prepared_image.shape[:2]
 
     # construct a blob from the image, set the input, and then perform a
     # forward pass of the network
-    blob = cv2.dnn.blobFromImage(prepared_image, 1.0, (w, h),
-        (103.939, 116.779, 123.680), swapRB=False, crop=False)
+    blob = cv2.dnn.blobFromImage(
+        prepared_image,
+        1.0,
+        (w, h),
+        (103.939, 116.779, 123.680),
+        swapRB=False,
+        crop=False,
+    )
     net.setInput(blob)
     output = net.forward()
 
@@ -43,9 +50,9 @@ for style_path, result_path in style_path_map.items():
     output[2] += 123.680
     output = output.transpose(1, 2, 0)
     output = np.clip(output, 0, 255)
-    output= output.astype('uint8')
+    output = output.astype("uint8")
 
     with open(result_path, "wb") as f:
-        f.write(cv2.imencode('.jpeg', output)[1].tobytes())
+        f.write(cv2.imencode(".jpeg", output)[1].tobytes())
 
 print("done!")

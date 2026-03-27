@@ -1,6 +1,6 @@
-[![orcapod API docs](https://img.shields.io/website?url=https://walkerlab.github.io/orcapod/&label=docs)
-](https://walkerlab.github.io/orcapod/)
-[![codecov](https://codecov.io/github/walkerlab/orcapod/graph/badge.svg)](https://codecov.io/github/walkerlab/orcapod)
+[![orcapod API docs](https://img.shields.io/website?url=https://censibal.github.io/orcapod/&label=docs)
+](https://censibal.github.io/orcapod/)
+[![codecov](https://codecov.io/github/censibal/orcapod/graph/badge.svg)](https://codecov.io/github/censibal/orcapod)
 
 # orcapod
 
@@ -40,7 +40,7 @@ git worktree remove dir-name # delete
 
 ## Project Management
 
-Progress is tracked under GH project [orcapod](https://github.com/orgs/walkerlab/projects/2).
+Progress is tracked under GH project [orcapod](https://github.com/orgs/censibal/projects/1).
 We track only issues in the project so don't add PRs.
 
 ### Flow

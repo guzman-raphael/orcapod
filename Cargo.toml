@@ -2,7 +2,7 @@
 name = "orcapod"
 version = "0.1.0"
 description = "Intuitive compute pipeline orchestration with reproducibility, performance, and scalability in mind."
-repository = "https://github.com/walkerlab/orcapod"
+repository = "https://github.com/censibal/orcapod"
 keywords = ["data", "pipeline", "compute", "orchestration"]
 categories = [
     # "algorithms",

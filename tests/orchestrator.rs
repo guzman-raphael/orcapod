@@ -8,38 +8,12 @@ use fixture::{
 use futures_util::future::join_all;
 use orcapod::uniffi::{
     error::{OrcaError, Result},
-    model::packet::{Blob, Packet, PathSet, URI},
+    model::packet::{Packet, URI},
     orchestrator::{
         ImageKind, Orchestrator as _, PodRun, PodStatus, docker::LocalDockerOrchestrator,
     },
 };
 use std::{collections::HashMap, path::PathBuf};
-
-/// Strips checksums from a packet so output structure can be compared independently of
-/// environment-specific file content (e.g. neural network outputs that vary across platforms).
-fn strip_checksums(packet: Packet) -> Packet {
-    packet
-        .into_iter()
-        .map(|(key, path_set)| {
-            let stripped = match path_set {
-                PathSet::Unary(blob) => PathSet::Unary(Blob {
-                    checksum: String::new(),
-                    ..blob
-                }),
-                PathSet::Collection(blobs) => PathSet::Collection(
-                    blobs
-                        .into_iter()
-                        .map(|blob| Blob {
-                            checksum: String::new(),
-                            ..blob
-                        })
-                        .collect(),
-                ),
-            };
-            (key, stripped)
-        })
-        .collect()
-}
 
 fn basic_test<T>(start: T) -> Result<()>
 where
@@ -78,11 +52,8 @@ where
         PodStatus::Completed,
         "Unexpected state."
     );
-    // Compare structure (keys, blob types, locations) without checksums — neural network outputs
-    // are non-deterministic across environments (CPU arch, library versions).
     assert_eq!(
-        strip_checksums(pod_result_1.output_packet.clone()),
-        strip_checksums(expected_output_packet),
+        pod_result_1.output_packet, expected_output_packet,
         "Unexpected output packet.",
     );
     assert_eq!(

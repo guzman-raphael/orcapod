@@ -10,7 +10,7 @@ use pretty_assertions::assert_eq as pretty_assert_eq;
 fn hash_pod() -> Result<()> {
     assert_eq!(
         pod_style()?.hash,
-        "0e993f645fbb36f0635e2c9140975997cf4ca723d0b49cf4ee4963b76e6424d7",
+        "bdcd489a09ef462e864e9ea48e0e4cf4f756dbfd70f000c6813a8a109a5bcae9",
         "Hash didn't match."
     );
     Ok(())
@@ -24,7 +24,7 @@ fn pod_to_yaml() -> Result<()> {
             class: pod
             image: example.server.com/user/style-transfer:1.0.0
             command:
-            - python
+            - python3
             - /run.py
             input_spec:
               base-input:
@@ -55,7 +55,7 @@ fn pod_to_yaml() -> Result<()> {
 fn hash_pod_job() -> Result<()> {
     assert_eq!(
         pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
-        "ba1c4693f9186ccb1b6e63625085d8fd95552b28b7a60fe9b1b47f68a9ba8880",
+        "4dc6fe947cd406d40f3d971676c5b33da31ba04606b5f4a179069fa2f5e8721b",
         "Hash didn't match."
     );
     Ok(())
@@ -67,7 +67,7 @@ fn pod_job_to_yaml() -> Result<()> {
         to_yaml(&pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
         indoc! {"
             class: pod_job
-            pod: 0e993f645fbb36f0635e2c9140975997cf4ca723d0b49cf4ee4963b76e6424d7
+            pod: bdcd489a09ef462e864e9ea48e0e4cf4f756dbfd70f000c6813a8a109a5bcae9
             input_packet:
               base-input:
               - kind: File
@@ -104,7 +104,7 @@ fn pod_job_to_yaml() -> Result<()> {
 fn hash_pod_result() -> Result<()> {
     assert_eq!(
         pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
-        "2df336726032846259efcb0fae11e0d51c475d4a6d174245ac1a7cd18e88e598",
+        "4503ce41026f1464f02f084b3a520fba4f8d5a3dcd65f0caef9c43b77689ea07",
         "Hash didn't match."
     );
     Ok(())
@@ -116,20 +116,20 @@ fn pod_result_to_yaml() -> Result<()> {
         to_yaml(&pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
         indoc! {"
             class: pod_result
-            pod_job: ba1c4693f9186ccb1b6e63625085d8fd95552b28b7a60fe9b1b47f68a9ba8880
+            pod_job: 4dc6fe947cd406d40f3d971676c5b33da31ba04606b5f4a179069fa2f5e8721b
             output_packet:
               result1:
                 kind: File
                 location:
                   namespace: default
                   path: output/result1.jpeg
-                checksum: 869701ce3e5b751bde04acdd3c4d422b0e9b3da8793dd6a007f752b6783ed8d5
+                checksum: 0a77eed486d85cd058b077711c938e5f1f6a84ea0c253cee4c1a1d8c5d9fdeef
               result2:
                 kind: File
                 location:
                   namespace: default
                   path: output/result2.jpeg
-                checksum: 2c414b3787a99aeb31b015a8f0620b4b6770247ec9dc518845c3d11a58b88db4
+                checksum: 82adff54d6188fa0049af7a40c304531f4dbb29d34f68a8b2706e5096e30aa30
             assigned_name: simple-endeavour
             status: Completed
             created: 1737922307
