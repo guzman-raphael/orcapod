@@ -2,7 +2,6 @@ name: Run Rust Syntax, Style, Format, and Integration Tests
 runs:
   using: composite
   steps:
-    - uses: actions/checkout@v4
     - name: Set Rust terminal color configuration
       run: echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
     - name: Install Rust + components

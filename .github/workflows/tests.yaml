@@ -11,6 +11,7 @@ jobs:
   rust-amd64-tests:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Run Rust Syntax, Style, Format, and Integration Tests
         uses: ./.github/actions/rust-syntax-style-format-and-integration-tests
       - name: Upload to codecov.io
@@ -22,6 +23,7 @@ jobs:
   rust-arm64-tests:
     runs-on: macos-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Run Rust Syntax, Style, Format, and Integration Tests
         uses: ./.github/actions/rust-syntax-style-format-and-integration-tests
   python-integration:
