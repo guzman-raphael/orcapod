@@ -21,6 +21,23 @@ runs:
       run: |
         : Run format test
         cargo fmt --check
+    # debug
+    - shell: bash
+      env:
+        RUST_BACKTRACE: full
+      run: |
+        : Run single orchestrator test to generate output images
+        sha256sum tests/extra/data/output/*
+        mkdir -p tests/.tmp
+        cargo test --no-default-features --features=test --package=orcapod --test orchestrator -- --exact --nocapture offline_container_image_basic || true
+        ls -la /tmp/result*.png
+        sha256sum /tmp/result*.png
+    - uses: actions/upload-artifact@v4
+      with:
+        name: style_images_${{ runner.arch }}
+        path: /tmp/result*.png
+        retention-days: 1
+    # debug
     - shell: bash
       env:
         RUST_BACKTRACE: full

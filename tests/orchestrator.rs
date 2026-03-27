@@ -1,4 +1,10 @@
-#![expect(missing_docs, clippy::panic_in_result_fn, reason = "OK in tests.")]
+#![expect(
+    missing_docs,
+    clippy::panic_in_result_fn,
+    clippy::indexing_slicing,
+    clippy::use_debug,
+    reason = "OK in tests."
+)]
 
 pub mod fixture;
 use fixture::{
@@ -8,12 +14,12 @@ use fixture::{
 use futures_util::future::join_all;
 use orcapod::uniffi::{
     error::{OrcaError, Result},
-    model::packet::{Packet, URI},
+    model::packet::{Packet, PathSet, URI},
     orchestrator::{
         ImageKind, Orchestrator as _, PodRun, PodStatus, docker::LocalDockerOrchestrator,
     },
 };
-use std::{collections::HashMap, path::PathBuf};
+use std::{collections::HashMap, fs, path::PathBuf};
 
 fn basic_test<T>(start: T) -> Result<()>
 where
@@ -47,6 +53,22 @@ where
     );
     // await result
     let pod_result_1 = orchestrator.get_result_blocking(&namespace_lookup, &pod_run)?;
+    // debug
+    println!("expected_output_packet: {expected_output_packet:?}");
+    for (key, value) in &pod_result_1.output_packet {
+        match value {
+            PathSet::Unary(blob) => {
+                fs::copy(
+                    namespace_lookup["default"].join(blob.location.path.clone()),
+                    format!("/tmp/{key}.png"),
+                )?;
+            }
+            PathSet::Collection(_) => {
+                todo!("Should not happen!")
+            }
+        }
+    }
+    // debug
     assert_eq!(
         orchestrator.get_info_blocking(&pod_run)?.status,
         PodStatus::Completed,
