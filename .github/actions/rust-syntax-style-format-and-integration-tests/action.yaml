@@ -1,0 +1,31 @@
+name: Run Rust Syntax, Style, Format, and Integration Tests
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+    - name: Set Rust terminal color configuration
+      run: echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
+    - name: Install Rust + components
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: 1.94
+        components: rustfmt,clippy
+    - name: Install code coverage
+      uses: taiki-e/install-action@cargo-llvm-cov
+    - name: Run syntax and style tests
+      run: cargo clippy --no-default-features --features=test --all-targets -- -D warnings
+    - name: Run format test
+      run: cargo fmt --check
+    - name: Run integration tests w/ coverage report
+      env:
+        RUST_BACKTRACE: full
+      run: |
+        mkdir -p tests/.tmp
+        cargo llvm-cov \
+          --no-default-features \
+          --features=test \
+          --ignore-filename-regex "bin/.*|lib\.rs" \
+          --cobertura \
+          --output-path target/llvm-cov-target/cobertura.xml \
+          -- \
+            --nocapture
