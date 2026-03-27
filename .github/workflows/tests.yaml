@@ -23,6 +23,10 @@ jobs:
   rust-arm64-tests:
     runs-on: macos-latest
     steps:
+      - name: Setup Docker
+        run: |
+          brew install docker
+          colima start
       - uses: actions/checkout@v4
       - name: Run Rust Syntax, Style, Format, and Integration Tests
         uses: ./.github/actions/rust-syntax-style-format-and-integration-tests
