@@ -2,8 +2,10 @@ name: Run Rust Syntax, Style, Format, and Integration Tests
 runs:
   using: composite
   steps:
-    - name: Set Rust terminal color configuration
-      run: echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
+    - shell: bash
+      run: |
+        : Set Rust terminal color configuration
+        echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
     - name: Install Rust + components
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
@@ -11,14 +13,19 @@ runs:
         components: rustfmt,clippy
     - name: Install code coverage
       uses: taiki-e/install-action@cargo-llvm-cov
-    - name: Run syntax and style tests
-      run: cargo clippy --no-default-features --features=test --all-targets -- -D warnings
-    - name: Run format test
-      run: cargo fmt --check
-    - name: Run integration tests w/ coverage report
+    - shell: bash
+      run: |
+        : Run syntax and style tests
+        cargo clippy --no-default-features --features=test --all-targets -- -D warnings
+    - shell: bash
+      run: |
+        : Run format test
+        cargo fmt --check
+    - shell: bash
       env:
         RUST_BACKTRACE: full
       run: |
+        : Run integration tests w/ coverage report
         mkdir -p tests/.tmp
         cargo llvm-cov \
           --no-default-features \
