@@ -63,15 +63,15 @@ pub fn pod_style() -> Result<Pod> {
             (
                 "result1".to_owned(),
                 PathInfo {
-                    path: PathBuf::from("result1.jpeg"),
-                    match_pattern: r".*\.jpeg".to_owned(),
+                    path: PathBuf::from("result1.png"),
+                    match_pattern: r".*\.png".to_owned(),
                 },
             ),
             (
                 "result2".to_owned(),
                 PathInfo {
-                    path: PathBuf::from("result2.jpeg"),
-                    match_pattern: r".*\.jpeg".to_owned(),
+                    path: PathBuf::from("result2.png"),
+                    match_pattern: r".*\.png".to_owned(),
                 },
             ),
         ]),

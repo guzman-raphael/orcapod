@@ -12,8 +12,8 @@ sleep(delay)
 
 image_path = "/input/subject.jpeg"
 style_path_map = {
-    "/input/style1.t7": "/output/result1.jpeg",
-    "/extra_styles/style2.t7": "/output/result2.jpeg",
+    "/input/style1.t7": "/output/result1.png",
+    "/extra_styles/style2.t7": "/output/result2.png",
 }
 
 with open(image_path, "rb") as f:
@@ -53,6 +53,6 @@ for style_path, result_path in style_path_map.items():
     output = output.astype("uint8")
 
     with open(result_path, "wb") as f:
-        f.write(cv2.imencode(".jpeg", output)[1].tobytes())
+        f.write(cv2.imencode(".png", output)[1].tobytes())
 
 print("done!")
