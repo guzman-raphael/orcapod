@@ -14,6 +14,10 @@
 #   example.server.com/user/style-transfer:1.0.0 \
 #   /run.py
 # docker ps -f 'label=org.orcapod=true'
-FROM jjhickman/opencv-python:basic
+# FROM python:3.11-slim
+# RUN pip install opencv-python-headless==4.10.0.84 numpy==1.26.4 imutils==0.5.4
+# FROM --platform=linux/amd64 demisto/opencv:1.0.0.4855524
+FROM demisto/opencv:1.0.0.4855524
+# FROM jjhickman/opencv-python:basic
 COPY ./run.py /run.py
-CMD ["python3", "/run.py"]
+CMD ["python", "/run.py"]
