@@ -3,6 +3,8 @@
     clippy::panic_in_result_fn,
     clippy::indexing_slicing,
     clippy::use_debug,
+    clippy::expect_used,
+    clippy::unwrap_in_result,
     reason = "OK in tests."
 )]
 
@@ -19,7 +21,12 @@ use orcapod::uniffi::{
         ImageKind, Orchestrator as _, PodRun, PodStatus, docker::LocalDockerOrchestrator,
     },
 };
-use std::{collections::HashMap, fs, path::PathBuf};
+use std::{
+    collections::HashMap,
+    fs,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 fn basic_test<T>(start: T) -> Result<()>
 where
@@ -55,6 +62,14 @@ where
     let pod_result_1 = orchestrator.get_result_blocking(&namespace_lookup, &pod_run)?;
     // debug
     println!("expected_output_packet: {expected_output_packet:?}");
+    let output = Command::new("docker")
+        .arg("logs")
+        .arg(&pod_result_1.assigned_name)
+        .stdout(Stdio::piped())
+        .output()?;
+
+    let stdout = String::from_utf8(output.stdout).expect("Oh debug no!");
+    println!("{stdout}");
     for (key, value) in &pod_result_1.output_packet {
         match value {
             PathSet::Unary(blob) => {
