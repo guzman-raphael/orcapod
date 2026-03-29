@@ -41,7 +41,7 @@ pub fn pod_style() -> Result<Pod> {
             version: "1.0.0".to_owned(),
         }),
         "example.server.com/user/style-transfer:1.0.0".to_owned(),
-        str_to_vec("python /run.py"),
+        str_to_vec("python3 /run.py"),
         HashMap::from([
             (
                 "extra-style".to_owned(),

@@ -10,7 +10,7 @@ use pretty_assertions::assert_eq as pretty_assert_eq;
 fn hash_pod() -> Result<()> {
     assert_eq!(
         pod_style()?.hash,
-        "3b7cd3c0e3972831c936713f9e7a96c6c2df67f1730f98c1c4d5383d82a24966",
+        "21941e5dc2bccb71474ff5daf98b284c151d79e10d4e906c59679b74d08f183e",
         "Hash didn't match."
     );
     Ok(())
@@ -24,7 +24,7 @@ fn pod_to_yaml() -> Result<()> {
             class: pod
             image: example.server.com/user/style-transfer:1.0.0
             command:
-            - python
+            - python3
             - /run.py
             input_spec:
               base-input:
@@ -55,7 +55,7 @@ fn pod_to_yaml() -> Result<()> {
 fn hash_pod_job() -> Result<()> {
     assert_eq!(
         pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
-        "ce64bf53b340911328a4a52a976073336aa728de8b268f45dd03a09caa65a68a",
+        "740282d465c1c4e772b0c28b0a470c6df8a921f9d772085707dcaf0a0f75317b",
         "Hash didn't match."
     );
     Ok(())
@@ -67,7 +67,7 @@ fn pod_job_to_yaml() -> Result<()> {
         to_yaml(&pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
         indoc! {"
             class: pod_job
-            pod: 3b7cd3c0e3972831c936713f9e7a96c6c2df67f1730f98c1c4d5383d82a24966
+            pod: 21941e5dc2bccb71474ff5daf98b284c151d79e10d4e906c59679b74d08f183e
             input_packet:
               base-input:
               - kind: File
@@ -104,7 +104,7 @@ fn pod_job_to_yaml() -> Result<()> {
 fn hash_pod_result() -> Result<()> {
     assert_eq!(
         pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
-        "c71871592c32ff1db03af8e45be0763a0135d94c73c971a6b00641adc81c1019",
+        "65df61e2934ec106b4cd029d8a0da341f013584b2071826475839711bddbd926",
         "Hash didn't match."
     );
     Ok(())
@@ -116,7 +116,7 @@ fn pod_result_to_yaml() -> Result<()> {
         to_yaml(&pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
         indoc! {"
             class: pod_result
-            pod_job: ce64bf53b340911328a4a52a976073336aa728de8b268f45dd03a09caa65a68a
+            pod_job: 740282d465c1c4e772b0c28b0a470c6df8a921f9d772085707dcaf0a0f75317b
             output_packet:
               result1:
                 kind: File
