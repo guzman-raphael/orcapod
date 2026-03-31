@@ -41,7 +41,7 @@ runs:
     - shell: bash
       env:
         RUST_BACKTRACE: full
-        CARGO_TERM_COLOR: always
+        # CARGO_TERM_COLOR: always
       run: |
         : Run integration tests w/ coverage report
         mkdir -p tests/.tmp
@@ -52,4 +52,5 @@ runs:
           --cobertura \
           --output-path target/llvm-cov-target/cobertura.xml \
           -- \
+            --color always
             --nocapture
