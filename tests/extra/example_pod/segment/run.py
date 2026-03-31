@@ -1,15 +1,16 @@
 import os
 
-os.environ["OMP_NUM_THREADS"] = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-os.environ["MKL_NUM_THREADS"] = "1"
+# os.environ["OMP_NUM_THREADS"] = "1"
+# os.environ["OPENBLAS_NUM_THREADS"] = "1"
+# os.environ["MKL_NUM_THREADS"] = "1"
 
 from pathlib import Path
 from PIL import Image
 import numpy as np
 from time import sleep
 import csv
-import hashlib
+
+# import hashlib
 
 
 def configure_runtime():

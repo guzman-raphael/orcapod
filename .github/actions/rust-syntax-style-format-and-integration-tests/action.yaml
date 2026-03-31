@@ -2,10 +2,10 @@ name: Run Rust Syntax, Style, Format, and Integration Tests
 runs:
   using: composite
   steps:
-    - shell: bash
-      run: |
-        : Set Rust terminal color configuration
-        echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
+    # - shell: bash
+    #   run: |
+    #     : Set Rust terminal color configuration
+    #     echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
     - name: Install Rust + components
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
@@ -41,6 +41,7 @@ runs:
     - shell: bash
       env:
         RUST_BACKTRACE: full
+        CARGO_TERM_COLOR: always
       run: |
         : Run integration tests w/ coverage report
         mkdir -p tests/.tmp
