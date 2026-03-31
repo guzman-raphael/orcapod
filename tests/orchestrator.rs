@@ -61,33 +61,33 @@ where
     // await result
     let pod_result_1 = orchestrator.get_result_blocking(&namespace_lookup, &pod_run)?;
     // debug
-    println!("expected_output_packet: {expected_output_packet:?}");
-    let output = Command::new("docker")
-        .arg("logs")
-        .arg(&pod_result_1.assigned_name)
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()?;
+    // println!("expected_output_packet: {expected_output_packet:?}");
+    // let output = Command::new("docker")
+    //     .arg("logs")
+    //     .arg(&pod_result_1.assigned_name)
+    //     .stdout(Stdio::piped())
+    //     .stderr(Stdio::piped())
+    //     .output()?;
 
-    let stdout = String::from_utf8(output.stdout).expect("Oh no stdout!");
-    println!("STDOUT:");
-    println!("{stdout}");
-    let stderr = String::from_utf8(output.stderr).expect("Oh no stderr!");
-    println!("STDERR:");
-    println!("{stderr}");
-    for (key, value) in &pod_result_1.output_packet {
-        match value {
-            PathSet::Unary(blob) => {
-                fs::copy(
-                    namespace_lookup["default"].join(blob.location.path.clone()),
-                    format!("/tmp/{key}.png"),
-                )?;
-            }
-            PathSet::Collection(_) => {
-                todo!("Should not happen!")
-            }
-        }
-    }
+    // let stdout = String::from_utf8(output.stdout).expect("Oh no stdout!");
+    // println!("STDOUT:");
+    // println!("{stdout}");
+    // let stderr = String::from_utf8(output.stderr).expect("Oh no stderr!");
+    // println!("STDERR:");
+    // println!("{stderr}");
+    // for (key, value) in &pod_result_1.output_packet {
+    //     match value {
+    //         PathSet::Unary(blob) => {
+    //             fs::copy(
+    //                 namespace_lookup["default"].join(blob.location.path.clone()),
+    //                 format!("/tmp/{key}.png"),
+    //             )?;
+    //         }
+    //         PathSet::Collection(_) => {
+    //             todo!("Should not happen!")
+    //         }
+    //     }
+    // }
     // debug
     assert_eq!(
         orchestrator.get_info_blocking(&pod_run)?.status,
