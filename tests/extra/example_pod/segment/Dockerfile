@@ -21,4 +21,5 @@
 # FROM jjhickman/opencv-python:basic
 FROM maclucky/bambulab-timelapse-downloader:1.0.9
 COPY ./run.py /run.py
+USER root
 CMD ["python3", "/run.py"]
