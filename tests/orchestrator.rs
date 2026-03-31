@@ -1,12 +1,4 @@
-#![expect(
-    missing_docs,
-    clippy::panic_in_result_fn,
-    // clippy::indexing_slicing,
-    // clippy::use_debug,
-    // clippy::expect_used,
-    // clippy::unwrap_in_result,
-    reason = "OK in tests."
-)]
+#![expect(missing_docs, clippy::panic_in_result_fn, reason = "OK in tests.")]
 
 pub mod fixture;
 use fixture::{
@@ -16,17 +8,12 @@ use fixture::{
 use futures_util::future::join_all;
 use orcapod::uniffi::{
     error::{OrcaError, Result},
-    model::packet::{Packet, URI}, // PathSet
+    model::packet::{Packet, URI},
     orchestrator::{
         ImageKind, Orchestrator as _, PodRun, PodStatus, docker::LocalDockerOrchestrator,
     },
 };
-use std::{
-    collections::HashMap,
-    // fs,
-    path::PathBuf,
-    // process::{Command, Stdio},
-};
+use std::{collections::HashMap, path::PathBuf};
 
 fn basic_test<T>(start: T) -> Result<()>
 where
@@ -60,35 +47,6 @@ where
     );
     // await result
     let pod_result_1 = orchestrator.get_result_blocking(&namespace_lookup, &pod_run)?;
-    // debug
-    // println!("expected_output_packet: {expected_output_packet:?}");
-    // let output = Command::new("docker")
-    //     .arg("logs")
-    //     .arg(&pod_result_1.assigned_name)
-    //     .stdout(Stdio::piped())
-    //     .stderr(Stdio::piped())
-    //     .output()?;
-
-    // let stdout = String::from_utf8(output.stdout).expect("Oh no stdout!");
-    // println!("STDOUT:");
-    // println!("{stdout}");
-    // let stderr = String::from_utf8(output.stderr).expect("Oh no stderr!");
-    // println!("STDERR:");
-    // println!("{stderr}");
-    // for (key, value) in &pod_result_1.output_packet {
-    //     match value {
-    //         PathSet::Unary(blob) => {
-    //             fs::copy(
-    //                 namespace_lookup["default"].join(blob.location.path.clone()),
-    //                 format!("/tmp/{key}.png"),
-    //             )?;
-    //         }
-    //         PathSet::Collection(_) => {
-    //             todo!("Should not happen!")
-    //         }
-    //     }
-    // }
-    // debug
     assert_eq!(
         orchestrator.get_info_blocking(&pod_run)?.status,
         PodStatus::Completed,

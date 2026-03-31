@@ -2,10 +2,6 @@ name: Run Rust Syntax, Style, Format, and Integration Tests
 runs:
   using: composite
   steps:
-    # - shell: bash
-    #   run: |
-    #     : Set Rust terminal color configuration
-    #     echo "CARGO_TERM_COLOR=always" >> $GITHUB_ENV
     - name: Install Rust + components
       uses: actions-rust-lang/setup-rust-toolchain@v1
       with:
@@ -21,27 +17,9 @@ runs:
       run: |
         : Run format test
         cargo fmt --check
-    # debug
-    # - shell: bash
-    #   env:
-    #     RUST_BACKTRACE: full
-    #   run: |
-    #     : Run single orchestrator test to generate output images
-    #     sha256sum tests/extra/data/output/*
-    #     mkdir -p tests/.tmp
-    #     cargo test --no-default-features --features=test --package=orcapod --test orchestrator -- --exact --nocapture offline_container_image_basic || true
-    #     ls -la /tmp/*.png
-    #     sha256sum /tmp/*.png
-    # - uses: actions/upload-artifact@v4
-    #   with:
-    #     name: segment_images_${{ runner.arch }}
-    #     path: /tmp/*.png
-    #     retention-days: 1
-    # debug
     - shell: bash
       env:
         RUST_BACKTRACE: full
-        # CARGO_TERM_COLOR: always
       run: |
         : Run integration tests w/ coverage report
         mkdir -p tests/.tmp

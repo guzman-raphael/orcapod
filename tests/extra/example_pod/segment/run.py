@@ -1,16 +1,9 @@
 import os
-
-# os.environ["OMP_NUM_THREADS"] = "1"
-# os.environ["OPENBLAS_NUM_THREADS"] = "1"
-# os.environ["MKL_NUM_THREADS"] = "1"
-
 from pathlib import Path
 from PIL import Image
 import numpy as np
 from time import sleep
 import csv
-
-# import hashlib
 
 
 def configure_runtime():
@@ -42,11 +35,6 @@ def segment(subject_image_path):
     normalized_image = (
         np.array(Image.open(subject_image_path).convert("L")).astype("float32") / 255.0
     )
-    # print(
-    #     "grayscale image hash:",
-    #     hashlib.sha256(normalized_image.tobytes()).hexdigest(),
-    #     flush=True,
-    # )
 
     # Threshold-based segmentation into 4 intensity classes
     mask = np.zeros_like(normalized_image, dtype=np.uint8)
@@ -55,12 +43,6 @@ def segment(subject_image_path):
     mask[(normalized_image >= 0.25) & (normalized_image < 0.6)] = 2
     mask[normalized_image >= 0.6] = 3
 
-    # print(
-    #     "mask hash:",
-    #     hashlib.sha256(mask.tobytes()).hexdigest(),
-    #     flush=True,
-    # )
-
     return mask
 
 
@@ -68,12 +50,6 @@ def save_overlay(mask, overlay_image_path, overlay_rgb_config):
     # Create overlay for visualization
     palette = np.array(overlay_rgb_config, dtype=np.uint8)
     overlay_image = palette[mask]
-
-    # print(
-    #     "overlay hash:",
-    #     hashlib.sha256(overlay_image.tobytes()).hexdigest(),
-    #     flush=True,
-    # )
 
     Image.fromarray(overlay_image).save(overlay_image_path, quality=95)
 
