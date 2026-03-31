@@ -52,5 +52,5 @@ runs:
           --cobertura \
           --output-path target/llvm-cov-target/cobertura.xml \
           -- \
-            --color always
+            --color always \
             --nocapture
