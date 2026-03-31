@@ -1,10 +1,10 @@
 #![expect(
     missing_docs,
     clippy::panic_in_result_fn,
-    clippy::indexing_slicing,
-    clippy::use_debug,
-    clippy::expect_used,
-    clippy::unwrap_in_result,
+    // clippy::indexing_slicing,
+    // clippy::use_debug,
+    // clippy::expect_used,
+    // clippy::unwrap_in_result,
     reason = "OK in tests."
 )]
 
@@ -16,16 +16,16 @@ use fixture::{
 use futures_util::future::join_all;
 use orcapod::uniffi::{
     error::{OrcaError, Result},
-    model::packet::{Packet, PathSet, URI},
+    model::packet::{Packet, URI}, // PathSet
     orchestrator::{
         ImageKind, Orchestrator as _, PodRun, PodStatus, docker::LocalDockerOrchestrator,
     },
 };
 use std::{
     collections::HashMap,
-    fs,
+    // fs,
     path::PathBuf,
-    process::{Command, Stdio},
+    // process::{Command, Stdio},
 };
 
 fn basic_test<T>(start: T) -> Result<()>
