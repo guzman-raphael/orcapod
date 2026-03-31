@@ -22,7 +22,7 @@ fn complex_hash() -> Result<()> {
     let dirpath = "./tests/extra/data/images";
     assert_eq!(
         hash_dir(dirpath)?,
-        "6c96a478ea25e34fab045bc82858a2980b2cfb22db32e83c01349a8e7ed3b42c".to_owned(),
+        "50de20a9df3854fd7b03cb352537f8a43cf3023c7529dd899566f50b24775c78".to_owned(),
         "Directory checksum didn't match."
     );
     Ok(())

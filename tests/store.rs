@@ -8,7 +8,8 @@
 
 pub mod fixture;
 use fixture::{
-    NAMESPACE_LOOKUP_READ_ONLY, TestDirs, TestSetup, pod_job_style, pod_result_style, pod_style,
+    NAMESPACE_LOOKUP_READ_ONLY, TestDirs, TestSetup, pod_job_segment, pod_result_segment,
+    pod_segment,
 };
 use orcapod::{
     core::{crypto::hash_buffer, model::to_yaml},
@@ -65,19 +66,19 @@ fn basic_test<T: TestSetup + PartialEq + Debug>(model: &T, expected_model: &T) -
 
 #[test]
 fn pod_basic() -> Result<()> {
-    let model = pod_style()?;
+    let model = pod_segment()?;
     basic_test(&model, &model)?;
     Ok(())
 }
 
 #[test]
 fn pod_job_basic() -> Result<()> {
-    let mut expected_model = pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?;
+    let mut expected_model = pod_job_segment(&NAMESPACE_LOOKUP_READ_ONLY)?;
     let mut pod = expected_model.pod.deref().clone();
     pod.annotation = None;
     expected_model.pod = Arc::new(pod);
     basic_test(
-        &pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?,
+        &pod_job_segment(&NAMESPACE_LOOKUP_READ_ONLY)?,
         &expected_model,
     )?;
     Ok(())
@@ -85,7 +86,7 @@ fn pod_job_basic() -> Result<()> {
 
 #[test]
 fn pod_result_basic() -> Result<()> {
-    let mut expected_model = pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?;
+    let mut expected_model = pod_result_segment(&NAMESPACE_LOOKUP_READ_ONLY)?;
     let mut pod_job = expected_model.pod_job.deref().clone();
     let mut pod = expected_model.pod_job.pod.deref().clone();
     pod_job.annotation = None;
@@ -93,7 +94,7 @@ fn pod_result_basic() -> Result<()> {
     pod_job.pod = Arc::new(pod);
     expected_model.pod_job = Arc::new(pod_job);
     basic_test(
-        &pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?,
+        &pod_result_segment(&NAMESPACE_LOOKUP_READ_ONLY)?,
         &expected_model,
     )?;
     Ok(())
@@ -103,19 +104,23 @@ fn pod_result_basic() -> Result<()> {
 fn pod_files() -> Result<()> {
     let test_dirs = TestDirs::new(&HashMap::from([("default".to_owned(), None::<String>)]))?;
     let store = LocalFileStore::new(test_dirs.0["default"].path().to_path_buf());
-    let pod_style = pod_style()?;
-    let annotation = pod_style
+    let pod_segment = pod_segment()?;
+    let annotation = pod_segment
         .annotation
         .as_ref()
-        .expect("Annotation missing from `pod_style`");
+        .expect("Annotation missing from `pod_segment`");
     let annotation_file = store.make_path(
-        &pod_style,
-        &pod_style.hash,
+        &pod_segment,
+        &pod_segment.hash,
         LocalFileStore::make_annotation_relpath(&annotation.name, &annotation.version),
     );
-    let spec_file = store.make_path(&pod_style, &pod_style.hash, LocalFileStore::SPEC_RELPATH);
+    let spec_file = store.make_path(
+        &pod_segment,
+        &pod_segment.hash,
+        LocalFileStore::SPEC_RELPATH,
+    );
 
-    store.save_pod(&pod_style)?;
+    store.save_pod(&pod_segment)?;
     assert!(spec_file.exists(), "Spec file missing.");
     assert!(annotation_file.exists(), "Annotation file missing.");
 
@@ -149,7 +154,7 @@ fn pod_list_empty() -> Result<()> {
 fn pod_load_from_hash() -> Result<()> {
     let test_dirs = TestDirs::new(&HashMap::from([("default".to_owned(), None::<String>)]))?;
     let store = LocalFileStore::new(test_dirs.0["default"].path().to_path_buf());
-    let mut pod = pod_style()?;
+    let mut pod = pod_segment()?;
     store.save_pod(&pod)?;
     pod.annotation = None;
     pretty_assert_eq!(
@@ -164,7 +169,7 @@ fn pod_load_from_hash() -> Result<()> {
 fn pod_annotation_delete() -> Result<()> {
     let test_dirs = TestDirs::new(&HashMap::from([("default".to_owned(), None::<String>)]))?;
     let store = LocalFileStore::new(test_dirs.0["default"].path().to_path_buf());
-    let mut pod = pod_style()?;
+    let mut pod = pod_segment()?;
     store.save_pod(&pod)?;
     let model_version = &pod.annotation.as_ref().map(|x| x.version.clone());
     let model_hash = &pod.hash;
@@ -184,7 +189,7 @@ fn pod_annotation_delete() -> Result<()> {
                 hash: model_hash.to_owned(),
             },
             ModelInfo {
-                name: Some("style-transfer".to_owned()),
+                name: Some("segment".to_owned()),
                 version: model_version.to_owned(),
                 hash: model_hash.to_owned(),
             },
@@ -202,7 +207,7 @@ fn pod_annotation_delete() -> Result<()> {
         store.list_pod()?,
         vec![
             ModelInfo {
-                name: Some("style-transfer".to_owned()),
+                name: Some("segment".to_owned()),
                 version: model_version.to_owned(),
                 hash: model_hash.to_owned(),
             },
@@ -217,10 +222,10 @@ fn pod_annotation_delete() -> Result<()> {
     // case 3: delete original annotation, assert list gives 1 entry: hash.
     store.delete_annotation(
         &ModelType::Pod,
-        "style-transfer",
+        "segment",
         &model_version
             .to_owned()
-            .expect("Version missing from `pod_style`"),
+            .expect("Version missing from `pod_segment`"),
     )?;
     pretty_assert_eq!(
         store.list_pod()?,
@@ -234,7 +239,7 @@ fn pod_annotation_delete() -> Result<()> {
     // case 4: delete invalid annotation, error should be returned.
     assert!(
         store
-            .delete_annotation(&ModelType::Pod, "style-transfer", "9.9.9")
+            .delete_annotation(&ModelType::Pod, "segment", "9.9.9")
             .is_err_and(|error| error.is_invalid_annotation() && !format!("{error:?}").is_empty()),
         "Did not raise an invalid annotation error."
     );
@@ -250,7 +255,7 @@ fn pod_annotation_unique() -> Result<()> {
         version: "1.0.0".to_owned(),
         description: "original".to_owned(),
     };
-    let mut pod = pod_style()?;
+    let mut pod = pod_segment()?;
     pod.annotation = Some(original_annotation.clone());
     store.save_pod(&pod)?;
     let original_hash = pod.hash.clone();
