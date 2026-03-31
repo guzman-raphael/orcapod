@@ -66,10 +66,15 @@ where
         .arg("logs")
         .arg(&pod_result_1.assigned_name)
         .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
         .output()?;
 
-    let stdout = String::from_utf8(output.stdout).expect("Oh debug no!");
+    let stdout = String::from_utf8(output.stdout).expect("Oh no stdout!");
+    println!("STDOUT:");
     println!("{stdout}");
+    let stderr = String::from_utf8(output.stderr).expect("Oh no stderr!");
+    println!("STDERR:");
+    println!("{stderr}");
     for (key, value) in &pod_result_1.output_packet {
         match value {
             PathSet::Unary(blob) => {
