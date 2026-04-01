@@ -33,21 +33,21 @@ use tempfile::TempDir;
 pub static NAMESPACE_LOOKUP_READ_ONLY: LazyLock<HashMap<String, PathBuf>> =
     LazyLock::new(|| HashMap::from([("default".to_owned(), PathBuf::from("./tests/extra/data"))]));
 
-pub fn pod_style() -> Result<Pod> {
+pub fn pod_segment() -> Result<Pod> {
     Pod::new(
         Some(Annotation {
-            name: "style-transfer".to_owned(),
+            name: "segment".to_owned(),
             description: "This is an example pod.".to_owned(),
             version: "1.0.0".to_owned(),
         }),
-        "example.server.com/user/style-transfer:1.0.0".to_owned(),
-        str_to_vec("python /run.py"),
+        "example.server.com/user/segment:1.0.0".to_owned(),
+        str_to_vec("python3 /run.py"),
         HashMap::from([
             (
-                "extra-style".to_owned(),
+                "extra-config".to_owned(),
                 PathInfo {
-                    path: PathBuf::from("/extra_styles/style2.t7"),
-                    match_pattern: r".*\.t7".to_owned(),
+                    path: PathBuf::from("/extra_configs/config2.csv"),
+                    match_pattern: r".*\.csv".to_owned(),
                 },
             ),
             (
@@ -61,43 +61,43 @@ pub fn pod_style() -> Result<Pod> {
         PathBuf::from("/output"),
         HashMap::from([
             (
-                "result1".to_owned(),
+                "overlay_image1".to_owned(),
                 PathInfo {
-                    path: PathBuf::from("result1.jpeg"),
-                    match_pattern: r".*\.jpeg".to_owned(),
+                    path: PathBuf::from("overlay_image1.png"),
+                    match_pattern: r".*\.png".to_owned(),
                 },
             ),
             (
-                "result2".to_owned(),
+                "overlay_image2".to_owned(),
                 PathInfo {
-                    path: PathBuf::from("result2.jpeg"),
-                    match_pattern: r".*\.jpeg".to_owned(),
+                    path: PathBuf::from("overlay_image2.png"),
+                    match_pattern: r".*\.png".to_owned(),
                 },
             ),
         ]),
-        "https://github.com/user/style-transfer/tree/1.0.0".to_owned(),
+        "https://github.com/user/segment/tree/1.0.0".to_owned(),
         0.25,        // 250 millicores as frac cores
         1_u64 << 30, // 1GiB in bytes
         None,
     )
 }
 
-pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -> Result<PodJob> {
+pub fn pod_job_segment(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -> Result<PodJob> {
     PodJob::new(
         Some(Annotation {
-            name: "style-transfer".to_owned(),
+            name: "segment".to_owned(),
             description: "This is an example pod job.".to_owned(),
             version: "0.1.0".to_owned(),
         }),
-        pod_style()?.into(),
+        pod_segment()?.into(),
         HashMap::from([
             (
-                "extra-style".to_owned(),
+                "extra-config".to_owned(),
                 PathSet::Unary(Blob {
                     kind: BlobKind::File,
                     location: URI {
                         namespace: "default".to_owned(),
-                        path: PathBuf::from("styles/mosaic.t7"),
+                        path: PathBuf::from("overlay_rgb_configs/colorblind_friendly.csv"),
                     },
                     checksum: String::new(),
                 }),
@@ -109,7 +109,7 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
                         kind: BlobKind::File,
                         location: URI {
                             namespace: "default".to_owned(),
-                            path: PathBuf::from("styles/style1.t7"),
+                            path: PathBuf::from("overlay_rgb_configs/config1.csv"),
                         },
                         checksum: String::new(),
                     },
@@ -138,16 +138,16 @@ pub fn pod_job_style(namespace_lookup: &HashMap<String, PathBuf, RandomState>) -
     )
 }
 
-pub fn pod_result_style(
+pub fn pod_result_segment(
     namespace_lookup: &HashMap<String, PathBuf, RandomState>,
 ) -> Result<PodResult> {
     PodResult::new(
         Some(Annotation {
-            name: "style-transfer".to_owned(),
+            name: "segment".to_owned(),
             description: "This is an example pod result.".to_owned(),
             version: "0.0.0".to_owned(),
         }),
-        pod_job_style(namespace_lookup)?.into(),
+        pod_job_segment(namespace_lookup)?.into(),
         "simple-endeavour".to_owned(),
         PodStatus::Completed,
         1_737_922_307,
@@ -225,8 +225,8 @@ pub fn pod_jobs_stresser(
         .collect::<Result<Vec<_>>>()
 }
 
-pub fn container_image_style(binary_location: impl AsRef<Path>) -> Result<TestContainerImage> {
-    let build_context_location = PathBuf::from("./tests/extra/example_pod/style_transfer");
+pub fn container_image_segment(binary_location: impl AsRef<Path>) -> Result<TestContainerImage> {
+    let build_context_location = PathBuf::from("./tests/extra/example_pod/segment");
 
     if let Some(parent) = binary_location.as_ref().parent() {
         fs::create_dir_all(parent)?;

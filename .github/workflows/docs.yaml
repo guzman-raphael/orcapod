@@ -3,14 +3,14 @@ on:
   - push
 jobs:
   diagram:
-    if: github.repository_owner == 'walkerlab' && github.event.pusher.name != 'walkerlab-repo-writer[bot]'
+    if: github.repository_owner == 'censibal' && github.event.pusher.name != 'censibal-repo-writer[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/create-github-app-token@v1
         id: generate_app_token
         with:
-          app-id: ${{ secrets.WALKERLAB_REPO_WRITER_APP_ID }}
-          private-key: ${{ secrets.WALKERLAB_REPO_WRITER_APP_PRIVATE_KEY }}
+          app-id: ${{ secrets.CENSIBAL_REPO_WRITER_APP_ID }}
+          private-key: ${{ secrets.CENSIBAL_REPO_WRITER_APP_PRIVATE_KEY }}
       - uses: actions/checkout@v4
         with:
           token: ${{ steps.generate_app_token.outputs.token }}
@@ -24,7 +24,7 @@ jobs:
           git commit -m "Update crate diagram." || echo "Diagram unchanged, skipping commit."
           git push
   api:
-    if: github.repository_owner == 'walkerlab' && github.ref == 'refs/heads/dev'
+    if: github.repository_owner == 'censibal' && github.ref == 'refs/heads/dev'
     runs-on: ubuntu-latest
     permissions:
       pages: write

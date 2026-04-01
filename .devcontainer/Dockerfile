@@ -34,7 +34,7 @@ ENV CARGO_HOME=/home/ubuntu/.cargo \
     PATH=/home/ubuntu/.cargo/bin:/home/ubuntu/.local/bin:$PATH
 RUN \
     # install rust
-    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.87.0 -y && \
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- --default-toolchain=1.94.0 -y && \
     # rust auto formatting
     rustup component add rustfmt && \
     # rust style linter

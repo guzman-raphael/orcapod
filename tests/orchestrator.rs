@@ -2,44 +2,18 @@
 
 pub mod fixture;
 use fixture::{
-    NAMESPACE_LOOKUP_READ_ONLY, TestContainerImage, TestDirs, container_image_style, pod_custom,
-    pod_job_custom, pod_job_style, pod_jobs_stresser, pod_result_style, str_to_vec,
+    NAMESPACE_LOOKUP_READ_ONLY, TestContainerImage, TestDirs, container_image_segment, pod_custom,
+    pod_job_custom, pod_job_segment, pod_jobs_stresser, pod_result_segment, str_to_vec,
 };
 use futures_util::future::join_all;
 use orcapod::uniffi::{
     error::{OrcaError, Result},
-    model::packet::{Blob, Packet, PathSet, URI},
+    model::packet::{Packet, URI},
     orchestrator::{
         ImageKind, Orchestrator as _, PodRun, PodStatus, docker::LocalDockerOrchestrator,
     },
 };
 use std::{collections::HashMap, path::PathBuf};
-
-/// Strips checksums from a packet so output structure can be compared independently of
-/// environment-specific file content (e.g. neural network outputs that vary across platforms).
-fn strip_checksums(packet: Packet) -> Packet {
-    packet
-        .into_iter()
-        .map(|(key, path_set)| {
-            let stripped = match path_set {
-                PathSet::Unary(blob) => PathSet::Unary(Blob {
-                    checksum: String::new(),
-                    ..blob
-                }),
-                PathSet::Collection(blobs) => PathSet::Collection(
-                    blobs
-                        .into_iter()
-                        .map(|blob| Blob {
-                            checksum: String::new(),
-                            ..blob
-                        })
-                        .collect(),
-                ),
-            };
-            (key, stripped)
-        })
-        .collect()
-}
 
 fn basic_test<T>(start: T) -> Result<()>
 where
@@ -78,11 +52,8 @@ where
         PodStatus::Completed,
         "Unexpected state."
     );
-    // Compare structure (keys, blob types, locations) without checksums — neural network outputs
-    // are non-deterministic across environments (CPU arch, library versions).
     assert_eq!(
-        strip_checksums(pod_result_1.output_packet.clone()),
-        strip_checksums(expected_output_packet),
+        pod_result_1.output_packet, expected_output_packet,
         "Unexpected output packet.",
     );
     assert_eq!(
@@ -124,17 +95,17 @@ where
 #[test]
 fn offline_container_image_basic() -> Result<()> {
     basic_test(|namespace_lookup, orchestrator| {
-        let container_image_relative_location = "container_images/style-transfer/image.tar.gz";
+        let container_image_relative_location = "container_images/segment/image.tar.gz";
         let container_image_kind = ImageKind::Tarball(URI {
             namespace: "default".to_owned(),
             path: PathBuf::from(container_image_relative_location),
         });
-        let container_image = container_image_style(
+        let container_image = container_image_segment(
             namespace_lookup["default"].join(container_image_relative_location),
         )?;
-        let mut pod_job = pod_job_style(namespace_lookup)?;
+        let mut pod_job = pod_job_segment(namespace_lookup)?;
         pod_job.env_vars = Some(HashMap::from([("DELAY".to_owned(), "5".to_owned())]));
-        let expected_pod_result = pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?;
+        let expected_pod_result = pod_result_segment(&NAMESPACE_LOOKUP_READ_ONLY)?;
         Ok((
             orchestrator.start_with_altimage_blocking(
                 namespace_lookup,

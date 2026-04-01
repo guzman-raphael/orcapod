@@ -8,7 +8,9 @@
 pub mod fixture;
 use chrono::DateTime;
 use dot_parser::ast::Graph as DOTGraph;
-use fixture::{NAMESPACE_LOOKUP_READ_ONLY, pod_custom, pod_job_custom, pod_job_style, str_to_vec};
+use fixture::{
+    NAMESPACE_LOOKUP_READ_ONLY, pod_custom, pod_job_custom, pod_job_segment, str_to_vec,
+};
 use glob::glob;
 use orcapod::{
     core::crypto::hash_file,
@@ -34,7 +36,7 @@ fn contains_debug(error: impl Into<OrcaError>) -> bool {
 #[test]
 fn external_bollard() -> Result<()> {
     let orch = LocalDockerOrchestrator::new()?;
-    let mut pod_job = pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?;
+    let mut pod_job = pod_job_segment(&NAMESPACE_LOOKUP_READ_ONLY)?;
     let mut pod = pod_job.pod.deref().clone();
     pod.image = "nonexistent_image".to_owned();
     pod_job.pod = Arc::new(pod);
@@ -165,7 +167,7 @@ fn internal_invalid_filepath() {
 #[test]
 fn internal_key_missing() {
     assert!(
-        pod_job_style(&HashMap::new()).is_err_and(contains_debug),
+        pod_job_segment(&HashMap::new()).is_err_and(contains_debug),
         "Did not raise a key missing error."
     );
 }

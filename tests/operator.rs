@@ -55,8 +55,8 @@ async fn join_once() -> Result<()> {
             (
                 "right".into(),
                 Packet::from([make_packet_key(
-                    "style".into(),
-                    format!("right/style{i}.t7"),
+                    "config".into(),
+                    format!("right/config{i}.csv"),
                 )]),
             )
         })
@@ -70,27 +70,27 @@ async fn join_once() -> Result<()> {
         vec![
             Packet::from([
                 make_packet_key("subject".into(), "left/subject0.png".into()),
-                make_packet_key("style".into(), "right/style0.t7".into()),
+                make_packet_key("config".into(), "right/config0.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject1.png".into()),
-                make_packet_key("style".into(), "right/style0.t7".into()),
+                make_packet_key("config".into(), "right/config0.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject2.png".into()),
-                make_packet_key("style".into(), "right/style0.t7".into()),
+                make_packet_key("config".into(), "right/config0.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject0.png".into()),
-                make_packet_key("style".into(), "right/style1.t7".into()),
+                make_packet_key("config".into(), "right/config1.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject1.png".into()),
-                make_packet_key("style".into(), "right/style1.t7".into()),
+                make_packet_key("config".into(), "right/config1.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject2.png".into()),
-                make_packet_key("style".into(), "right/style1.t7".into()),
+                make_packet_key("config".into(), "right/config1.csv".into()),
             ]),
         ],
         "Unexpected streams."
@@ -107,7 +107,7 @@ async fn join_spotty() -> Result<()> {
         operator
             .next(
                 "right".into(),
-                Packet::from([make_packet_key("style".into(), "right/style0.t7".into())])
+                Packet::from([make_packet_key("config".into(), "right/config0.csv".into())])
             )
             .await?,
         vec![],
@@ -118,7 +118,7 @@ async fn join_spotty() -> Result<()> {
         operator
             .next(
                 "right".into(),
-                Packet::from([make_packet_key("style".into(), "right/style1.t7".into())])
+                Packet::from([make_packet_key("config".into(), "right/config1.csv".into())])
             )
             .await?,
         vec![],
@@ -138,11 +138,11 @@ async fn join_spotty() -> Result<()> {
         vec![
             Packet::from([
                 make_packet_key("subject".into(), "left/subject0.png".into()),
-                make_packet_key("style".into(), "right/style0.t7".into()),
+                make_packet_key("config".into(), "right/config0.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject0.png".into()),
-                make_packet_key("style".into(), "right/style1.t7".into()),
+                make_packet_key("config".into(), "right/config1.csv".into()),
             ]),
         ],
         "Unexpected streams."
@@ -167,19 +167,19 @@ async fn join_spotty() -> Result<()> {
         vec![
             Packet::from([
                 make_packet_key("subject".into(), "left/subject1.png".into()),
-                make_packet_key("style".into(), "right/style0.t7".into()),
+                make_packet_key("config".into(), "right/config0.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject1.png".into()),
-                make_packet_key("style".into(), "right/style1.t7".into()),
+                make_packet_key("config".into(), "right/config1.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject2.png".into()),
-                make_packet_key("style".into(), "right/style0.t7".into()),
+                make_packet_key("config".into(), "right/config0.csv".into()),
             ]),
             Packet::from([
                 make_packet_key("subject".into(), "left/subject2.png".into()),
-                make_packet_key("style".into(), "right/style1.t7".into()),
+                make_packet_key("config".into(), "right/config1.csv".into()),
             ]),
         ],
         "Unexpected streams."

@@ -1,7 +1,7 @@
 #![expect(missing_docs, clippy::panic_in_result_fn, reason = "OK in tests.")]
 
 pub mod fixture;
-use fixture::{NAMESPACE_LOOKUP_READ_ONLY, pod_job_style, pod_result_style, pod_style};
+use fixture::{NAMESPACE_LOOKUP_READ_ONLY, pod_job_segment, pod_result_segment, pod_segment};
 use indoc::indoc;
 use orcapod::{core::model::to_yaml, uniffi::error::Result};
 use pretty_assertions::assert_eq as pretty_assert_eq;
@@ -9,8 +9,8 @@ use pretty_assertions::assert_eq as pretty_assert_eq;
 #[test]
 fn hash_pod() -> Result<()> {
     assert_eq!(
-        pod_style()?.hash,
-        "0e993f645fbb36f0635e2c9140975997cf4ca723d0b49cf4ee4963b76e6424d7",
+        pod_segment()?.hash,
+        "454c117d131912e96b36d0f9c33a32c8f71df1546dfa816abe3a8a1a78af284b",
         "Hash didn't match."
     );
     Ok(())
@@ -19,29 +19,29 @@ fn hash_pod() -> Result<()> {
 #[test]
 fn pod_to_yaml() -> Result<()> {
     pretty_assert_eq!(
-        to_yaml(&pod_style()?)?,
+        to_yaml(&pod_segment()?)?,
         indoc! {r"
             class: pod
-            image: example.server.com/user/style-transfer:1.0.0
+            image: example.server.com/user/segment:1.0.0
             command:
-            - python
+            - python3
             - /run.py
             input_spec:
               base-input:
                 path: /input
                 match_pattern: input/.*
-              extra-style:
-                path: /extra_styles/style2.t7
-                match_pattern: .*\.t7
+              extra-config:
+                path: /extra_configs/config2.csv
+                match_pattern: .*\.csv
             output_dir: /output
             output_spec:
-              result1:
-                path: result1.jpeg
-                match_pattern: .*\.jpeg
-              result2:
-                path: result2.jpeg
-                match_pattern: .*\.jpeg
-            source_commit_url: https://github.com/user/style-transfer/tree/1.0.0
+              overlay_image1:
+                path: overlay_image1.png
+                match_pattern: .*\.png
+              overlay_image2:
+                path: overlay_image2.png
+                match_pattern: .*\.png
+            source_commit_url: https://github.com/user/segment/tree/1.0.0
             recommended_cpus: 0.25
             recommended_memory: 1073741824
             required_gpu: null
@@ -54,8 +54,8 @@ fn pod_to_yaml() -> Result<()> {
 #[test]
 fn hash_pod_job() -> Result<()> {
     assert_eq!(
-        pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
-        "ba1c4693f9186ccb1b6e63625085d8fd95552b28b7a60fe9b1b47f68a9ba8880",
+        pod_job_segment(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
+        "31caf15566c088a39b7734b15c6005a449a967d4fe0aca403b6a78f4ced63de7",
         "Hash didn't match."
     );
     Ok(())
@@ -64,28 +64,28 @@ fn hash_pod_job() -> Result<()> {
 #[test]
 fn pod_job_to_yaml() -> Result<()> {
     pretty_assert_eq!(
-        to_yaml(&pod_job_style(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
+        to_yaml(&pod_job_segment(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
         indoc! {"
             class: pod_job
-            pod: 0e993f645fbb36f0635e2c9140975997cf4ca723d0b49cf4ee4963b76e6424d7
+            pod: 454c117d131912e96b36d0f9c33a32c8f71df1546dfa816abe3a8a1a78af284b
             input_packet:
               base-input:
               - kind: File
                 location:
                   namespace: default
-                  path: styles/style1.t7
-                checksum: 69e709c1697e290994d2da75ddfb2097bf801a9436a3727a282e0230e703da2b
+                  path: overlay_rgb_configs/config1.csv
+                checksum: 9b7c08286f87e667dbd2dfee7f61a62185d40752bec4e46cb75add5957583ac1
               - kind: File
                 location:
                   namespace: default
                   path: images/subject.jpeg
-                checksum: 8b44b8ea83b1f5eec3ac16cf941767e629896c465803fb69c21adbbf984516bd
-              extra-style:
+                checksum: 263f0561cc87e60e0fab37dda4121450dd1d61d4c515dcb66cac19de46c9dd6c
+              extra-config:
                 kind: File
                 location:
                   namespace: default
-                  path: styles/mosaic.t7
-                checksum: fbd7d882e9e02aafb57366e726762025ff6b2e12cd41abd44b874542b7693771
+                  path: overlay_rgb_configs/colorblind_friendly.csv
+                checksum: f78dfdfbdfd3ffec1e0731f155cb4293406d627928ea93df363a790eb3eaed38
             output_dir:
               namespace: default
               path: output
@@ -103,8 +103,8 @@ fn pod_job_to_yaml() -> Result<()> {
 #[test]
 fn hash_pod_result() -> Result<()> {
     assert_eq!(
-        pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
-        "2df336726032846259efcb0fae11e0d51c475d4a6d174245ac1a7cd18e88e598",
+        pod_result_segment(&NAMESPACE_LOOKUP_READ_ONLY)?.hash,
+        "00f0d08f438c2ad61984c81bd8208037f973de9dbb488569b6518501016664b3",
         "Hash didn't match."
     );
     Ok(())
@@ -113,23 +113,23 @@ fn hash_pod_result() -> Result<()> {
 #[test]
 fn pod_result_to_yaml() -> Result<()> {
     pretty_assert_eq!(
-        to_yaml(&pod_result_style(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
+        to_yaml(&pod_result_segment(&NAMESPACE_LOOKUP_READ_ONLY)?)?,
         indoc! {"
             class: pod_result
-            pod_job: ba1c4693f9186ccb1b6e63625085d8fd95552b28b7a60fe9b1b47f68a9ba8880
+            pod_job: 31caf15566c088a39b7734b15c6005a449a967d4fe0aca403b6a78f4ced63de7
             output_packet:
-              result1:
+              overlay_image1:
                 kind: File
                 location:
                   namespace: default
-                  path: output/result1.jpeg
-                checksum: 869701ce3e5b751bde04acdd3c4d422b0e9b3da8793dd6a007f752b6783ed8d5
-              result2:
+                  path: output/overlay_image1.png
+                checksum: f7ee153db93f7a287b59bfae4aafc4864ac90c5fafd3663df8d40f147f7d4ab4
+              overlay_image2:
                 kind: File
                 location:
                   namespace: default
-                  path: output/result2.jpeg
-                checksum: 2c414b3787a99aeb31b015a8f0620b4b6770247ec9dc518845c3d11a58b88db4
+                  path: output/overlay_image2.png
+                checksum: 2f8baec0e8f595cc14907e5caab8c8eb4865e5806149e9646679127669258f0c
             assigned_name: simple-endeavour
             status: Completed
             created: 1737922307

@@ -80,7 +80,7 @@ fn input_packet_checksum() -> Result<()> {
 
     assert_eq!(
         checksum,
-        "8b44b8ea83b1f5eec3ac16cf941767e629896c465803fb69c21adbbf984516bd".to_owned(),
+        "263f0561cc87e60e0fab37dda4121450dd1d61d4c515dcb66cac19de46c9dd6c".to_owned(),
         "Incorrect checksum"
     );
     Ok(())
