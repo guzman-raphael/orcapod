@@ -50,6 +50,7 @@ async fn parallel_four_cores() -> Result<()> {
     // config
     let image_reference = "ghcr.io/colinianking/stress-ng:e2f96874f951a72c1c83ff49098661f0e013ac40";
     pull_image(image_reference)?;
+    let readiness_delay_secs = 2;
     let margin_millis = 2000;
     let run_duration_secs = 5;
     let (group, host) = ("agent_parallel-four-cores", "host");
@@ -70,7 +71,7 @@ async fn parallel_four_cores() -> Result<()> {
         let inner_client = client.clone();
         async move { inner_client.watch("**".to_owned()).await }
     });
-    async_sleep(Duration::from_secs(5)).await; // ensure watch is ready
+    async_sleep(Duration::from_secs(readiness_delay_secs)).await; // ensure watch is ready
     services.spawn({
         let inner_agent = agent.clone();
         let inner_store = store.clone();
@@ -80,7 +81,6 @@ async fn parallel_four_cores() -> Result<()> {
                 .await
         }
     });
-    async_sleep(Duration::from_secs(5)).await; // ensure services are ready
     services.spawn(async move {
         let current_timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
@@ -106,17 +106,21 @@ async fn parallel_four_cores() -> Result<()> {
             if ["success", "failure"].contains(&topic_kind) {
                 let pod_result = serde_json::from_slice::<PodResult>(&sample.payload().to_bytes())?;
                 assert!(
-                    u128::from(pod_result.created * 1000) <= current_timestamp + margin_millis,
+                    u128::from(pod_result.created * 1000)
+                        <= current_timestamp
+                            + u128::from(readiness_delay_secs) * 1000
+                            + margin_millis,
                     "Started pod run too late."
                 );
                 assert!(
                     u128::from(pod_result.terminated * 1000)
                         <= current_timestamp
+                            + u128::from(readiness_delay_secs) * 1000
                             + 2 * margin_millis
                             + u128::from(run_duration_secs * 1000),
                     "Took too long to finish pod run."
                 );
-                async_sleep(Duration::from_secs(1)).await; // give agent a chance to save pod result first
+                async_sleep(Duration::from_secs(readiness_delay_secs)).await; // give agent a chance to save pod result first
                 assert_eq!(
                     store.load_pod_result(&ModelID::Hash(pod_result.hash.clone()))?,
                     pod_result,
@@ -127,6 +131,17 @@ async fn parallel_four_cores() -> Result<()> {
                 } else {
                     failure_counter += 1;
                 }
+                println!(
+                    "timestamp: {}, success_counter: {}, failure_counter: {}",
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .expect(
+                            "Current time is earlier than start of epoch (1970-01-01 00:00:00)."
+                        )
+                        .as_millis(),
+                    success_counter,
+                    failure_counter
+                );
                 if success_counter == 3 && failure_counter == 1 {
                     break;
                 }
@@ -134,6 +149,7 @@ async fn parallel_four_cores() -> Result<()> {
         }
         Ok(())
     });
+    async_sleep(Duration::from_secs(readiness_delay_secs)).await; // ensure services are ready and assert checks are listening
     // submit requests
     client
         .start_pod_jobs(pod_jobs_stresser(image_reference, run_duration_secs, 3, 1)?)
